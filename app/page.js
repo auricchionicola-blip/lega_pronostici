@@ -61,13 +61,20 @@ export default function Home() {
     { rank: 4, name: 'Matteo', matchdayPts: 0, totalPts: 125, exactScores: 1 },
   ];
 
-  // Calcola automaticamente l'esito 1X2 dai gol
-  const calculateOutcome = (homeScore, awayScore) => {
-    if (homeScore === '' || awayScore === '' || homeScore === undefined || awayScore === undefined) {
+  // Calcola automaticamente l'esito 1X2 considerando 0 di default se un valore è presente
+  const calculateOutcome = (homeVal, awayVal) => {
+    // Se entrambi i campi sono vuoti o non definiti, non calcolare
+    const isHomeEmpty = homeVal === '' || homeVal === undefined || homeVal === null;
+    const isAwayEmpty = awayVal === '' || awayVal === undefined || awayVal === null;
+
+    if (isHomeEmpty && isAwayEmpty) {
       return null;
     }
-    const h = parseInt(homeScore, 10);
-    const a = parseInt(awayScore, 10);
+
+    // Se almeno uno è stato toccato/inserito, l'altro assume valore 0 di default
+    const h = isHomeEmpty ? 0 : parseInt(homeVal, 10);
+    const a = isAwayEmpty ? 0 : parseInt(awayVal, 10);
+
     if (isNaN(h) || isNaN(a)) return null;
     if (h > a) return '1';
     if (h < a) return '2';
@@ -83,8 +90,8 @@ export default function Home() {
       };
 
       const computedOutcome = calculateOutcome(
-        team === 'homeScore' ? value : updatedMatchPred.homeScore,
-        team === 'awayScore' ? value : updatedMatchPred.awayScore
+        updatedMatchPred.homeScore,
+        updatedMatchPred.awayScore
       );
 
       return {
