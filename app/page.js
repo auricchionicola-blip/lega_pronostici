@@ -61,12 +61,48 @@ export default function Home() {
     { rank: 4, name: 'Matteo', matchdayPts: 0, totalPts: 125, exactScores: 1 },
   ];
 
-  const handlePredictionChange = (matchId, field, value) => {
+  // Calcola automaticamente l'esito 1X2 dai gol
+  const calculateOutcome = (homeScore, awayScore) => {
+    if (homeScore === '' || awayScore === '' || homeScore === undefined || awayScore === undefined) {
+      return null;
+    }
+    const h = parseInt(homeScore, 10);
+    const a = parseInt(awayScore, 10);
+    if (isNaN(h) || isNaN(a)) return null;
+    if (h > a) return '1';
+    if (h < a) return '2';
+    return 'X';
+  };
+
+  const handleScoreChange = (matchId, team, value) => {
+    setUserPredictions((prev) => {
+      const currentMatchPred = prev[matchId] || { homeScore: '', awayScore: '', scorer: '' };
+      const updatedMatchPred = {
+        ...currentMatchPred,
+        [team]: value,
+      };
+
+      const computedOutcome = calculateOutcome(
+        team === 'homeScore' ? value : updatedMatchPred.homeScore,
+        team === 'awayScore' ? value : updatedMatchPred.awayScore
+      );
+
+      return {
+        ...prev,
+        [matchId]: {
+          ...updatedMatchPred,
+          outcome: computedOutcome,
+        },
+      };
+    });
+  };
+
+  const handleScorerChange = (matchId, value) => {
     setUserPredictions((prev) => ({
       ...prev,
       [matchId]: {
         ...prev[matchId],
-        [field]: value,
+        scorer: value,
       },
     }));
   };
@@ -125,82 +161,97 @@ export default function Home() {
               </div>
             </div>
 
-            {matches.map((match) => (
-              <div key={match.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 space-y-3">
-                <div className="flex justify-between items-center text-xs text-slate-500 border-b border-slate-100 pb-2">
-                  <span className="font-medium">{match.time}</span>
-                  <span
-                    className={`font-bold px-2 py-0.5 rounded-md text-[11px] ${
-                      match.status === 'FINISHED'
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : 'bg-amber-100 text-amber-700'
-                    }`}
-                  >
-                    {match.status === 'FINISHED' ? 'Finale' : 'Aperto'}
-                  </span>
+            {matches.map((match) => {
+              const currentPred = userPredictions[match.id] || {};
+              const currentOutcome = currentPred.outcome;
+
+              return (
+                <div key={match.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 space-y-3">
+                  <div className="flex justify-between items-center text-xs text-slate-500 border-b border-slate-100 pb-2">
+                    <span className="font-medium">{match.time}</span>
+                    <span
+                      className={`font-bold px-2 py-0.5 rounded-md text-[11px] ${
+                        match.status === 'FINISHED'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-amber-100 text-amber-700'
+                      }`}
+                    >
+                      {match.status === 'FINISHED' ? 'Finale' : 'Aperto'}
+                    </span>
+                  </div>
+
+                  {/* Squadre e Risultati Reali */}
+                  <div className="flex justify-between items-center py-1">
+                    <span className="font-bold text-slate-800 text-base w-1/3 text-right">{match.home}</span>
+                    <div className="bg-slate-100 px-3 py-1.5 rounded-xl font-mono font-bold text-sm text-center border border-slate-200 min-w-[60px]">
+                      {match.status === 'FINISHED' ? `${match.realHomeScore} - ${match.realAwayScore}` : 'VS'}
+                    </div>
+                    <span className="font-bold text-slate-800 text-base w-1/3 text-left">{match.away}</span>
+                  </div>
+
+                  {/* Modulo Pronostico */}
+                  <div className="bg-slate-50 p-3 rounded-xl space-y-3 border border-slate-200/80">
+                    {/* Risultato Esatto */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-600 font-semibold">Risultato Esatto:</span>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="0"
+                          value={currentPred.homeScore ?? ''}
+                          onChange={(e) => handleScoreChange(match.id, 'homeScore', e.target.value)}
+                          className="w-12 bg-white text-center text-xs py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold shadow-sm"
+                        />
+                        <span className="text-xs text-slate-400 font-bold">-</span>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="0"
+                          value={currentPred.awayScore ?? ''}
+                          onChange={(e) => handleScoreChange(match.id, 'awayScore', e.target.value)}
+                          className="w-12 bg-white text-center text-xs py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold shadow-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Esito 1X2 Calcolato In Automatico */}
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
+                      <span className="text-xs text-slate-500 font-medium">Esito (Calcolato):</span>
+                      <div className="grid grid-cols-3 gap-1.5 w-36">
+                        {['1', 'X', '2'].map((outcome) => {
+                          const isActive = currentOutcome === outcome;
+                          return (
+                            <div
+                              key={outcome}
+                              className={`py-1 rounded-md text-center text-xs font-bold transition-all border ${
+                                isActive
+                                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                                  : 'bg-slate-200/60 text-slate-400 border-slate-200'
+                              }`}
+                            >
+                              {outcome}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Marcatore */}
+                    <div className="flex items-center space-x-2 pt-1 border-t border-slate-200/60">
+                      <span className="text-xs text-slate-600 w-24 font-medium">Marcatore:</span>
+                      <input
+                        type="text"
+                        placeholder="Es. Rossi"
+                        value={currentPred.scorer ?? ''}
+                        onChange={(e) => handleScorerChange(match.id, e.target.value)}
+                        className="flex-1 bg-white px-2.5 py-1 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
+                      />
+                    </div>
+                  </div>
                 </div>
-
-                {/* Squadre e Risultati Reali */}
-                <div className="flex justify-between items-center py-1">
-                  <span className="font-bold text-slate-800 text-base w-1/3 text-right">{match.home}</span>
-                  <div className="bg-slate-100 px-3 py-1.5 rounded-xl font-mono font-bold text-sm text-center border border-slate-200 min-w-[60px]">
-                    {match.status === 'FINISHED' ? `${match.realHomeScore} - ${match.realAwayScore}` : 'VS'}
-                  </div>
-                  <span className="font-bold text-slate-800 text-base w-1/3 text-left">{match.away}</span>
-                </div>
-
-                {/* Modulo Pronostico */}
-                <div className="bg-slate-50 p-3 rounded-xl space-y-2 border border-slate-200/80">
-                  <div className="text-xs font-semibold text-slate-500 mb-1">Il tuo Pronostico:</div>
-
-                  {/* Esito 1X2 */}
-                  <div className="grid grid-cols-3 gap-2">
-                    {['1', 'X', '2'].map((outcome) => (
-                      <button
-                        key={outcome}
-                        onClick={() => handlePredictionChange(match.id, 'outcome', outcome)}
-                        className={`py-1.5 rounded-lg text-xs font-bold transition-all ${
-                          userPredictions[match.id]?.outcome === outcome
-                            ? 'bg-emerald-600 text-white shadow-sm'
-                            : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                        }`}
-                      >
-                        {outcome}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Risultato Esatto */}
-                  <div className="flex items-center space-x-2 pt-1">
-                    <span className="text-xs text-slate-600 w-24 font-medium">Risultato:</span>
-                    <input
-                      type="number"
-                      placeholder="0"
-                      onChange={(e) => handlePredictionChange(match.id, 'homeScore', e.target.value)}
-                      className="w-12 bg-white text-center text-xs py-1 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
-                    />
-                    <span className="text-xs text-slate-400 font-bold">-</span>
-                    <input
-                      type="number"
-                      placeholder="0"
-                      onChange={(e) => handlePredictionChange(match.id, 'awayScore', e.target.value)}
-                      className="w-12 bg-white text-center text-xs py-1 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
-                    />
-                  </div>
-
-                  {/* Marcatore */}
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xs text-slate-600 w-24 font-medium">Marcatore:</span>
-                    <input
-                      type="text"
-                      placeholder="Es. Rossi"
-                      onChange={(e) => handlePredictionChange(match.id, 'scorer', e.target.value)}
-                      className="flex-1 bg-white px-2.5 py-1 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
 
             <button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-all text-sm">
               Salva Pronostici
