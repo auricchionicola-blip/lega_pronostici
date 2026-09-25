@@ -6,6 +6,7 @@ import { Trophy, Calendar, Users, RefreshCw, Settings, Database } from 'lucide-r
 export default function Home() {
   const [activeTab, setActiveTab] = useState('matches');
   const [selectedLeague, setSelectedLeague] = useState('SA');
+  const [targetSyncLeague, setTargetSyncLeague] = useState('SA');
   const [matchday, setMatchday] = useState(null);
   const [standingsType, setStandingsType] = useState('matchday');
   const [userPredictions, setUserPredictions] = useState({});
@@ -15,7 +16,7 @@ export default function Home() {
   const [matches, setMatches] = useState([]);
   const [teamsSquads, setTeamsSquads] = useState({});
   const [loading, setLoading] = useState(true);
-  const [syncingAllSquads, setSyncingAllSquads] = useState(false);
+  const [syncingSquads, setSyncingSquads] = useState(false);
   const [syncMessage, setSyncMessage] = useState('');
   const [error, setError] = useState(null);
 
@@ -46,55 +47,52 @@ export default function Home() {
     setTeamsSquads(loadedSquads);
   }, []);
 
-  // Funzione On-Demand per aggiornare le rose di TUTTE le leghe insieme
-  const syncAllLeaguesSquads = async () => {
-    setSyncingAllSquads(true);
-    setSyncMessage('Inizio sincronizzazione di tutte le leghe...');
+  // Funzione On-Demand per aggiornare le rose della singola lega selezionata
+  const syncSelectedLeagueSquads = async () => {
+    setSyncingSquads(true);
+    const selectedLeagueName = leagues.find((l) => l.id === targetSyncLeague)?.name || targetSyncLeague;
+    setSyncMessage(`Download lista squadre per ${selectedLeagueName}...`);
     const updatedSquads = { ...teamsSquads };
 
     try {
-      for (const league of leagues) {
-        setSyncMessage(`Download lista squadre per ${league.name}...`);
-        
-        try {
-          const res = await fetch(`/api/football?endpoint=competitions/${league.id}/teams`);
-          const data = await res.json();
+      const res = await fetch(`/api/football?endpoint=competitions/${targetSyncLeague}/teams`);
+      const data = await res.json();
 
-          if (data.teams && data.teams.length > 0) {
-            let count = 0;
-            for (const team of data.teams) {
-              count++;
-              setSyncMessage(`[${league.name}] Download rosa ${count}/${data.teams.length}: ${team.shortName || team.name}...`);
+      if (data.error) throw new Error(data.error);
 
-              try {
-                const teamRes = await fetch(`/api/football?endpoint=teams/${team.id}`);
-                const teamData = await teamRes.json();
+      if (data.teams && data.teams.length > 0) {
+        let count = 0;
+        for (const team of data.teams) {
+          count++;
+          setSyncMessage(`[${selectedLeagueName}] Download rosa ${count}/${data.teams.length}: ${team.shortName || team.name}...`);
 
-                if (teamData.squad && Array.isArray(teamData.squad)) {
-                  const players = teamData.squad.map((p) => p.name);
-                  const cacheKey = `squad_ondemand_${team.id}`;
-                  localStorage.setItem(cacheKey, JSON.stringify(players));
-                  updatedSquads[team.id] = players;
-                }
-              } catch (e) {
-                console.error(`Errore caricamento rosa team ${team.id}:`, e);
-              }
+          try {
+            const teamRes = await fetch(`/api/football?endpoint=teams/${team.id}`);
+            const teamData = await teamRes.json();
 
-              // Pausa per rispettare i limiti dell'API gratuita
-              await new Promise((resolve) => setTimeout(resolve, 1200));
+            if (teamData.squad && Array.isArray(teamData.squad)) {
+              const players = teamData.squad.map((p) => p.name);
+              const cacheKey = `squad_ondemand_${team.id}`;
+              localStorage.setItem(cacheKey, JSON.stringify(players));
+              updatedSquads[team.id] = players;
             }
+          } catch (e) {
+            console.error(`Errore caricamento rosa team ${team.id}:`, e);
           }
-        } catch (e) {
-          console.error(`Errore lega ${league.id}:`, e);
-        }
-      }
 
-      setTeamsSquads(updatedSquads);
-      setSyncMessage('Sincronizzazione completata con successo per tutte le leghe!');
+          // Pausa di 6 secondi per non superare il limite di 10 chiamate/minuto
+          await new Promise((resolve) => setTimeout(resolve, 6000));
+        }
+
+        setTeamsSquads(updatedSquads);
+        setSyncMessage(`Sincronizzazione completata per ${selectedLeagueName}! Rose salvate in memoria.`);
+      } else {
+        setSyncMessage(`Nessuna squadra trovata per ${selectedLeagueName}.`);
+      }
     } catch (err) {
       setSyncMessage(`Errore durante il download: ${err.message}`);
     } finally {
-      setSyncingAllSquads(false);
+      setSyncingSquads(false);
     }
   };
 
@@ -514,19 +512,36 @@ export default function Home() {
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-4">
               <div className="flex items-center space-x-2 border-b border-slate-100 pb-3">
                 <Database className="w-5 h-5 text-emerald-600" />
-                <h3 className="font-bold text-sm text-slate-800">Gestione Dati e Rose</h3>
+                <h3 className="font-bold text-sm text-slate-800">Gestione Dati Rose</h3>
               </div>
               <p className="text-xs text-slate-500 leading-relaxed">
-                Aggiorna manualmente le rose ufficiali dei calciatori per tutte le 6 leghe supportate (Serie A, Premier League, La Liga, ecc.). L'operazione scaricherà i dati una sola volta salvandoli sul tuo dispositivo per velocizzare i marcatori.
+                Seleziona una lega alla volta da aggiornare on-demand per non superare il limite di chiamate API gratuite.
               </p>
 
+              {/* Selettore della Lega da aggiornare */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700">Lega da aggiornare:</label>
+                <select
+                  value={targetSyncLeague}
+                  onChange={(e) => setTargetSyncLeague(e.target.value)}
+                  disabled={syncingSquads}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  {leagues.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.country} {l.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <button
-                onClick={syncAllLeaguesSquads}
-                disabled={syncingAllSquads}
+                onClick={syncSelectedLeagueSquads}
+                disabled={syncingSquads}
                 className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white font-bold py-3 rounded-xl shadow-md transition-all text-xs flex items-center justify-center space-x-2"
               >
-                <RefreshCw className={`w-4 h-4 ${syncingAllSquads ? 'animate-spin' : ''}`} />
-                <span>{syncingAllSquads ? 'Sincronizzazione in corso...' : 'Aggiorna Rose (Tutte le Leghe)'}</span>
+                <RefreshCw className={`w-4 h-4 ${syncingSquads ? 'animate-spin' : ''}`} />
+                <span>{syncingSquads ? 'Sincronizzazione in corso...' : 'Aggiorna Rose di questa Lega'}</span>
               </button>
 
               {syncMessage && (
