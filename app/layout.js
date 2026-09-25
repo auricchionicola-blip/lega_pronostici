@@ -9,7 +9,7 @@ export default function RootLayout({ children }) {
       <head>
         <script src="https://cdn.tailwindcss.com"></script>
       </head>
-      <body className="bg-slate-950 text-slate-100 antialiased min-h-screen">
+      <body className="bg-slate-100 text-slate-800 antialiased min-h-screen">
         {children}
       </body>
     </html>
