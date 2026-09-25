@@ -6,13 +6,14 @@ import { Trophy, Calendar, Users, RefreshCw } from 'lucide-react';
 export default function Home() {
   const [activeTab, setActiveTab] = useState('matches');
   const [selectedLeague, setSelectedLeague] = useState('SA');
-  const [matchday, setMatchday] = useState(28);
+  const [matchday, setMatchday] = useState(null);
   const [standingsType, setStandingsType] = useState('matchday');
   const [userPredictions, setUserPredictions] = useState({});
   const [inviteCode, setInviteCode] = useState('');
 
   // Stato per i dati dall'API
   const [matches, setMatches] = useState([]);
+  const [teamsSquads, setTeamsSquads] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -26,13 +27,58 @@ export default function Home() {
     { id: 'EL', name: 'Europa League', country: '🇪🇺' },
   ];
 
-  // Carica le partite reali dall'API
-  const fetchMatches = async () => {
+  // Carica le rose dal localStorage o dall'API se assenti
+  const loadSquadForTeam = async (teamId) => {
+    if (!teamId || teamsSquads[teamId]) return;
+
+    const cacheKey = `squad_v1_${teamId}`;
+    const cachedSquad = localStorage.getItem(cacheKey);
+
+    if (cachedSquad) {
+      try {
+        const parsed = JSON.parse(cachedSquad);
+        setTeamsSquads((prev) => ({ ...prev, [teamId]: parsed }));
+        return;
+      } catch (e) {
+        localStorage.removeItem(cacheKey);
+      }
+    }
+
+    try {
+      const res = await fetch(`/api/football?endpoint=teams/${teamId}`);
+      const data = await res.json();
+      if (data.squad) {
+        const players = data.squad.map((p) => p.name);
+        localStorage.setItem(cacheKey, JSON.stringify(players));
+        setTeamsSquads((prev) => ({ ...prev, [teamId]: players }));
+      }
+    } catch (err) {
+      console.error('Errore caricamento rosa:', err);
+    }
+  };
+
+  // Carica la giornata corrente e le relative partite dall'API
+  const fetchMatches = async (forcedMatchday = null) => {
     setLoading(true);
     setError(null);
     try {
+      let targetMatchday = forcedMatchday || matchday;
+
+      // Se la giornata non è definita, chiediamo la stagione per conoscere quella corrente
+      if (!targetMatchday) {
+        const compRes = await fetch(`/api/football?endpoint=competitions/${selectedLeague}`);
+        const compData = await compRes.json();
+        if (compData.currentSeason?.currentMatchday) {
+          targetMatchday = compData.currentSeason.currentMatchday;
+          setMatchday(targetMatchday);
+        } else {
+          targetMatchday = 1;
+          setMatchday(1);
+        }
+      }
+
       const res = await fetch(
-        `/api/football?endpoint=competitions/${selectedLeague}/matches&matchday=${matchday}`
+        `/api/football?endpoint=competitions/${selectedLeague}/matches&matchday=${targetMatchday}`
       );
       const data = await res.json();
 
@@ -40,8 +86,12 @@ export default function Home() {
         throw new Error(data.error);
       }
 
-      if (data.matches) {
+      if (data.matches && data.matches.length > 0) {
         setMatches(data.matches);
+        data.matches.forEach((m) => {
+          if (m.homeTeam?.id) loadSquadForTeam(m.homeTeam.id);
+          if (m.awayTeam?.id) loadSquadForTeam(m.awayTeam.id);
+        });
       } else {
         setMatches([]);
       }
@@ -52,11 +102,13 @@ export default function Home() {
     }
   };
 
+  // Cambio campionato
   useEffect(() => {
-    fetchMatches();
-  }, [selectedLeague, matchday]);
+    setMatchday(null);
+    fetchMatches(null);
+  }, [selectedLeague]);
 
-  // Classifica di prova (verrà automatizzata al salvataggio pronostici)
+  // Classifica di prova
   const leaderboard = [
     { rank: 1, name: 'Marco (Tu)', matchdayPts: 6, totalPts: 142, exactScores: 2 },
     { rank: 2, name: 'Luca', matchdayPts: 4, totalPts: 138, exactScores: 1 },
@@ -64,7 +116,7 @@ export default function Home() {
     { rank: 4, name: 'Matteo', matchdayPts: 0, totalPts: 125, exactScores: 1 },
   ];
 
-  // Calcola automaticamente l'esito 1X2 considerando 0 di default se un valore è presente
+  // Calcola automaticamente l'esito 1X2 considerando 0 di default
   const calculateOutcome = (homeVal, awayVal) => {
     const isHomeEmpty = homeVal === '' || homeVal === undefined || homeVal === null;
     const isAwayEmpty = awayVal === '' || awayVal === undefined || awayVal === null;
@@ -113,6 +165,12 @@ export default function Home() {
     }));
   };
 
+  const handleMatchdayChange = (newMatchday) => {
+    const validMatchday = Math.max(1, newMatchday);
+    setMatchday(validMatchday);
+    fetchMatches(validMatchday);
+  };
+
   const formatDate = (utcDate) => {
     if (!utcDate) return '';
     const d = new Date(utcDate);
@@ -134,7 +192,7 @@ export default function Home() {
           <h1 className="font-bold text-lg tracking-wide">Lega Pronostici</h1>
         </div>
         <button
-          onClick={fetchMatches}
+          onClick={() => fetchMatches(matchday)}
           className="bg-emerald-900/60 hover:bg-emerald-900 text-emerald-100 p-1.5 rounded-full border border-emerald-400/30 transition-all"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -165,16 +223,18 @@ export default function Home() {
         {activeTab === 'matches' && (
           <div className="space-y-4">
             <div className="flex justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-slate-200">
-              <span className="text-sm font-bold text-slate-700">Giornata {matchday}</span>
+              <span className="text-sm font-bold text-slate-700">
+                {matchday ? `Giornata ${matchday}` : 'Caricamento...'}
+              </span>
               <div className="flex space-x-1">
                 <button
-                  onClick={() => setMatchday(Math.max(1, matchday - 1))}
+                  onClick={() => handleMatchdayChange((matchday || 1) - 1)}
                   className="px-2.5 py-1 bg-slate-100 text-slate-600 text-xs rounded-lg font-semibold hover:bg-slate-200 border border-slate-200"
                 >
                   &lt; Pres
                 </button>
                 <button
-                  onClick={() => setMatchday(matchday + 1)}
+                  onClick={() => handleMatchdayChange((matchday || 1) + 1)}
                   className="px-2.5 py-1 bg-slate-100 text-slate-600 text-xs rounded-lg font-semibold hover:bg-slate-200 border border-slate-200"
                 >
                   Succ &gt;
@@ -207,6 +267,10 @@ export default function Home() {
                 const currentPred = userPredictions[match.id] || {};
                 const currentOutcome = currentPred.outcome;
                 const isFinished = match.status === 'FINISHED';
+
+                const homeSquad = teamsSquads[match.homeTeam?.id] || [];
+                const awaySquad = teamsSquads[match.awayTeam?.id] || [];
+                const combinedSquad = [...homeSquad, ...awaySquad];
 
                 return (
                   <div
@@ -289,16 +353,24 @@ export default function Home() {
                         </div>
                       </div>
 
-                      {/* Marcatore */}
+                      {/* Marcatore con Suggerimenti Dinamici */}
                       <div className="flex items-center space-x-2 pt-1 border-t border-slate-200/60">
                         <span className="text-xs text-slate-600 w-24 font-medium">Marcatore:</span>
-                        <input
-                          type="text"
-                          placeholder="Es. Rossi"
-                          value={currentPred.scorer ?? ''}
-                          onChange={(e) => handleScorerChange(match.id, e.target.value)}
-                          className="flex-1 bg-white px-2.5 py-1 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
-                        />
+                        <div className="flex-1">
+                          <input
+                            type="text"
+                            list={`players-${match.id}`}
+                            placeholder="Digita o seleziona..."
+                            value={currentPred.scorer ?? ''}
+                            onChange={(e) => handleScorerChange(match.id, e.target.value)}
+                            className="w-full bg-white px-2.5 py-1 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
+                          />
+                          <datalist id={`players-${match.id}`}>
+                            {combinedSquad.map((player, idx) => (
+                              <option key={idx} value={player} />
+                            ))}
+                          </datalist>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -323,7 +395,7 @@ export default function Home() {
                   standingsType === 'matchday' ? 'bg-emerald-600 text-white' : 'text-slate-500'
                 }`}
               >
-                Giornata {matchday}
+                Giornata {matchday || 1}
               </button>
               <button
                 onClick={() => setStandingsType('total')}
