@@ -215,19 +215,19 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Esito 1X2 Calcolato In Automatico */}
+                    {/* Esito 1X2 Evidenziato di Verde se selezionato */}
                     <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
-                      <span className="text-xs text-slate-500 font-medium">Esito (Calcolato):</span>
+                      <span className="text-xs text-slate-500 font-medium">Esito:</span>
                       <div className="grid grid-cols-3 gap-1.5 w-36">
                         {['1', 'X', '2'].map((outcome) => {
                           const isActive = currentOutcome === outcome;
                           return (
                             <div
                               key={outcome}
-                              className={`py-1 rounded-md text-center text-xs font-bold transition-all border ${
+                              className={`py-1.5 rounded-lg text-center text-xs font-black transition-all border ${
                                 isActive
-                                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                                  : 'bg-slate-200/60 text-slate-400 border-slate-200'
+                                  ? 'bg-emerald-500 text-white border-emerald-600 shadow-md scale-105'
+                                  : 'bg-slate-200/70 text-slate-400 border-slate-200'
                               }`}
                             >
                               {outcome}
