@@ -2,9 +2,11 @@ import { NextResponse } from 'next/server';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
-  const endpoint = searchParams.get('endpoint') || 'competitions/SA/matches';
+  let endpoint = searchParams.get('endpoint') || 'competitions/SA/matches';
 
-  // Rimuoviamo il parametro endpoint prima di inviare i parametri all'API finale
+  // Pulizia da eventuali caratteri estranei o parentesi nel parametro
+  endpoint = endpoint.replace(/[\[\]\(\)]/g, '').trim();
+
   const apiParams = new URLSearchParams(searchParams);
   apiParams.delete('endpoint');
 
@@ -15,7 +17,7 @@ export async function GET(request) {
 
   if (!apiKey) {
     return NextResponse.json(
-      { error: 'FOOTBALL_API_KEY non trovata su Vercel' },
+      { error: 'FOOTBALL_API_KEY non trovata nelle variabili d\'ambiente di Vercel.' },
       { status: 500 }
     );
   }
@@ -27,10 +29,21 @@ export async function GET(request) {
         'X-Auth-Token': apiKey.trim(),
         'User-Agent': 'LegaPronosticiApp/1.0',
       },
-      next: { revalidate: 60 }, // Cache di 60 secondi
+      next: { revalidate: 60 },
     });
 
-    const data = await response.json();
+    const responseText = await response.text();
+
+    // Tenta il parsing JSON
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      return NextResponse.json(
+        { error: `Risposta non valida dall'API (${response.status}): ${responseText.slice(0, 150)}` },
+        { status: response.status || 500 }
+      );
+    }
 
     if (!response.ok) {
       return NextResponse.json(
@@ -42,7 +55,7 @@ export async function GET(request) {
     return NextResponse.json(data);
   } catch (error) {
     return NextResponse.json(
-      { error: error.message || 'Errore di connessione con Football-Data.org' },
+      { error: error.message || 'Errore durante la connessione a Football-Data.org' },
       { status: 500 }
     );
   }
