@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Trophy, Calendar, Users, RefreshCw } from 'lucide-react';
+import { Trophy, Calendar, Users, RefreshCw, Settings, Database } from 'lucide-react';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('matches');
@@ -15,6 +15,8 @@ export default function Home() {
   const [matches, setMatches] = useState([]);
   const [teamsSquads, setTeamsSquads] = useState({});
   const [loading, setLoading] = useState(true);
+  const [syncingAllSquads, setSyncingAllSquads] = useState(false);
+  const [syncMessage, setSyncMessage] = useState('');
   const [error, setError] = useState(null);
 
   // Campionati supportati
@@ -27,33 +29,72 @@ export default function Home() {
     { id: 'EL', name: 'Europa League', country: '🇪🇺' },
   ];
 
-  // Carica le rose dal localStorage o dall'API se assenti
-  const loadSquadForTeam = async (teamId) => {
-    if (!teamId || teamsSquads[teamId]) return;
-
-    const cacheKey = `squad_v1_${teamId}`;
-    const cachedSquad = localStorage.getItem(cacheKey);
-
-    if (cachedSquad) {
-      try {
-        const parsed = JSON.parse(cachedSquad);
-        setTeamsSquads((prev) => ({ ...prev, [teamId]: parsed }));
-        return;
-      } catch (e) {
-        localStorage.removeItem(cacheKey);
+  // Carica le rose salvate nel localStorage all'avvio
+  useEffect(() => {
+    const loadedSquads = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('squad_ondemand_')) {
+        const teamId = key.replace('squad_ondemand_', '');
+        try {
+          loadedSquads[teamId] = JSON.parse(localStorage.getItem(key));
+        } catch (e) {
+          console.error(e);
+        }
       }
     }
+    setTeamsSquads(loadedSquads);
+  }, []);
+
+  // Funzione On-Demand per aggiornare le rose di TUTTE le leghe insieme
+  const syncAllLeaguesSquads = async () => {
+    setSyncingAllSquads(true);
+    setSyncMessage('Inizio sincronizzazione di tutte le leghe...');
+    const updatedSquads = { ...teamsSquads };
 
     try {
-      const res = await fetch(`/api/football?endpoint=teams/${teamId}`);
-      const data = await res.json();
-      if (data.squad) {
-        const players = data.squad.map((p) => p.name);
-        localStorage.setItem(cacheKey, JSON.stringify(players));
-        setTeamsSquads((prev) => ({ ...prev, [teamId]: players }));
+      for (const league of leagues) {
+        setSyncMessage(`Download lista squadre per ${league.name}...`);
+        
+        try {
+          const res = await fetch(`/api/football?endpoint=competitions/${league.id}/teams`);
+          const data = await res.json();
+
+          if (data.teams && data.teams.length > 0) {
+            let count = 0;
+            for (const team of data.teams) {
+              count++;
+              setSyncMessage(`[${league.name}] Download rosa ${count}/${data.teams.length}: ${team.shortName || team.name}...`);
+
+              try {
+                const teamRes = await fetch(`/api/football?endpoint=teams/${team.id}`);
+                const teamData = await teamRes.json();
+
+                if (teamData.squad && Array.isArray(teamData.squad)) {
+                  const players = teamData.squad.map((p) => p.name);
+                  const cacheKey = `squad_ondemand_${team.id}`;
+                  localStorage.setItem(cacheKey, JSON.stringify(players));
+                  updatedSquads[team.id] = players;
+                }
+              } catch (e) {
+                console.error(`Errore caricamento rosa team ${team.id}:`, e);
+              }
+
+              // Pausa per rispettare i limiti dell'API gratuita
+              await new Promise((resolve) => setTimeout(resolve, 1200));
+            }
+          }
+        } catch (e) {
+          console.error(`Errore lega ${league.id}:`, e);
+        }
       }
+
+      setTeamsSquads(updatedSquads);
+      setSyncMessage('Sincronizzazione completata con successo per tutte le leghe!');
     } catch (err) {
-      console.error('Errore caricamento rosa:', err);
+      setSyncMessage(`Errore durante il download: ${err.message}`);
+    } finally {
+      setSyncingAllSquads(false);
     }
   };
 
@@ -64,7 +105,6 @@ export default function Home() {
     try {
       let targetMatchday = forcedMatchday || matchday;
 
-      // Se la giornata non è definita, chiediamo la stagione per conoscere quella corrente
       if (!targetMatchday) {
         const compRes = await fetch(`/api/football?endpoint=competitions/${selectedLeague}`);
         const compData = await compRes.json();
@@ -88,10 +128,6 @@ export default function Home() {
 
       if (data.matches && data.matches.length > 0) {
         setMatches(data.matches);
-        data.matches.forEach((m) => {
-          if (m.homeTeam?.id) loadSquadForTeam(m.homeTeam.id);
-          if (m.awayTeam?.id) loadSquadForTeam(m.awayTeam.id);
-        });
       } else {
         setMatches([]);
       }
@@ -102,7 +138,6 @@ export default function Home() {
     }
   };
 
-  // Cambio campionato
   useEffect(() => {
     setMatchday(null);
     fetchMatches(null);
@@ -185,7 +220,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 font-sans pb-24 max-w-md mx-auto shadow-2xl border-x border-slate-200">
-      {/* Header chiaro con gradiente sportivo */}
+      {/* Header chiaro */}
       <header className="bg-gradient-to-r from-emerald-700 to-teal-800 text-white p-4 shadow-md sticky top-0 z-50 flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <Trophy className="w-6 h-6 text-amber-300" />
@@ -200,22 +235,24 @@ export default function Home() {
       </header>
 
       {/* Selector Campionato */}
-      <div className="p-3 bg-white border-b border-slate-200 flex space-x-2 overflow-x-auto shadow-sm">
-        {leagues.map((league) => (
-          <button
-            key={league.id}
-            onClick={() => setSelectedLeague(league.id)}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-              selectedLeague === league.id
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            <span>{league.country}</span>
-            <span>{league.name}</span>
-          </button>
-        ))}
-      </div>
+      {activeTab === 'matches' && (
+        <div className="p-3 bg-white border-b border-slate-200 flex space-x-2 overflow-x-auto shadow-sm">
+          {leagues.map((league) => (
+            <button
+              key={league.id}
+              onClick={() => setSelectedLeague(league.id)}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                selectedLeague === league.id
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              <span>{league.country}</span>
+              <span>{league.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Contenuto Principale */}
       <main className="p-4">
@@ -268,9 +305,11 @@ export default function Home() {
                 const currentOutcome = currentPred.outcome;
                 const isFinished = match.status === 'FINISHED';
 
+                const homeName = match.homeTeam?.shortName || match.homeTeam?.name || 'Casa';
+                const awayName = match.awayTeam?.shortName || match.awayTeam?.name || 'Trasferta';
+
                 const homeSquad = teamsSquads[match.homeTeam?.id] || [];
                 const awaySquad = teamsSquads[match.awayTeam?.id] || [];
-                const combinedSquad = [...homeSquad, ...awaySquad];
 
                 return (
                   <div
@@ -293,7 +332,7 @@ export default function Home() {
                     {/* Squadre e Risultati Reali */}
                     <div className="flex justify-between items-center py-1">
                       <span className="font-bold text-slate-800 text-sm w-1/3 text-right">
-                        {match.homeTeam?.shortName || match.homeTeam?.name}
+                        {homeName}
                       </span>
                       <div className="bg-slate-100 px-3 py-1.5 rounded-xl font-mono font-bold text-sm text-center border border-slate-200 min-w-[60px]">
                         {isFinished
@@ -301,7 +340,7 @@ export default function Home() {
                           : 'VS'}
                       </div>
                       <span className="font-bold text-slate-800 text-sm w-1/3 text-left">
-                        {match.awayTeam?.shortName || match.awayTeam?.name}
+                        {awayName}
                       </span>
                     </div>
 
@@ -353,7 +392,7 @@ export default function Home() {
                         </div>
                       </div>
 
-                      {/* Marcatore con Suggerimenti Dinamici */}
+                      {/* Marcatore con Dati Locali */}
                       <div className="flex items-center space-x-2 pt-1 border-t border-slate-200/60">
                         <span className="text-xs text-slate-600 w-24 font-medium">Marcatore:</span>
                         <div className="flex-1">
@@ -366,8 +405,11 @@ export default function Home() {
                             className="w-full bg-white px-2.5 py-1 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
                           />
                           <datalist id={`players-${match.id}`}>
-                            {combinedSquad.map((player, idx) => (
-                              <option key={idx} value={player} />
+                            {homeSquad.map((player, idx) => (
+                              <option key={`h-${idx}`} value={player} />
+                            ))}
+                            {awaySquad.map((player, idx) => (
+                              <option key={`a-${idx}`} value={player} />
                             ))}
                           </datalist>
                         </div>
@@ -465,10 +507,41 @@ export default function Home() {
             </div>
           </div>
         )}
+
+        {/* TAB 4: IMPOSTAZIONI */}
+        {activeTab === 'settings' && (
+          <div className="space-y-4">
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+              <div className="flex items-center space-x-2 border-b border-slate-100 pb-3">
+                <Database className="w-5 h-5 text-emerald-600" />
+                <h3 className="font-bold text-sm text-slate-800">Gestione Dati e Rose</h3>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Aggiorna manualmente le rose ufficiali dei calciatori per tutte le 6 leghe supportate (Serie A, Premier League, La Liga, ecc.). L'operazione scaricherà i dati una sola volta salvandoli sul tuo dispositivo per velocizzare i marcatori.
+              </p>
+
+              <button
+                onClick={syncAllLeaguesSquads}
+                disabled={syncingAllSquads}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white font-bold py-3 rounded-xl shadow-md transition-all text-xs flex items-center justify-center space-x-2"
+              >
+                <RefreshCw className={`w-4 h-4 ${syncingAllSquads ? 'animate-spin' : ''}`} />
+                <span>{syncingAllSquads ? 'Sincronizzazione in corso...' : 'Aggiorna Rose (Tutte le Leghe)'}</span>
+              </button>
+
+              {syncMessage && (
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs font-medium text-slate-700 space-y-1">
+                  <p className="font-bold text-emerald-700">Stato processo:</p>
+                  <p>{syncMessage}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </main>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur border-t border-slate-200 grid grid-cols-3 py-2 z-50 shadow-lg">
+      {/* Bottom Navigation con Impostazioni */}
+      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur border-t border-slate-200 grid grid-cols-4 py-2 z-50 shadow-lg">
         <button
           onClick={() => setActiveTab('matches')}
           className={`flex flex-col items-center space-y-1 ${
@@ -497,6 +570,16 @@ export default function Home() {
         >
           <Users className="w-5 h-5" />
           <span className="text-[10px]">Lega</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('settings')}
+          className={`flex flex-col items-center space-y-1 ${
+            activeTab === 'settings' ? 'text-emerald-600 font-bold' : 'text-slate-400'
+          }`}
+        >
+          <Settings className="w-5 h-5" />
+          <span className="text-[10px]">Impostazioni</span>
         </button>
       </nav>
     </div>
