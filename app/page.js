@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Trophy, Calendar, Users, Settings } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Trophy, Calendar, Users, RefreshCw } from 'lucide-react';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('matches');
@@ -10,7 +10,11 @@ export default function Home() {
   const [standingsType, setStandingsType] = useState('matchday');
   const [userPredictions, setUserPredictions] = useState({});
   const [inviteCode, setInviteCode] = useState('');
-  const [apiKey, setApiKey] = useState('');
+
+  // Stato per i dati dall'API
+  const [matches, setMatches] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Campionati supportati
   const leagues = [
@@ -22,38 +26,37 @@ export default function Home() {
     { id: 'EL', name: 'Europa League', country: '🇪🇺' },
   ];
 
-  // Dati di esempio per le partite
-  const matches = [
-    {
-      id: 1,
-      home: 'Parma',
-      away: 'Lazio',
-      time: 'Oggi 18:00',
-      status: 'FINISHED',
-      realHomeScore: 2,
-      realAwayScore: 1,
-    },
-    {
-      id: 2,
-      home: 'Inter',
-      away: 'Juventus',
-      time: 'Oggi 20:45',
-      status: 'SCHEDULED',
-      realHomeScore: null,
-      realAwayScore: null,
-    },
-    {
-      id: 3,
-      home: 'Milan',
-      away: 'Roma',
-      time: 'Dom 15:00',
-      status: 'SCHEDULED',
-      realHomeScore: null,
-      realAwayScore: null,
-    },
-  ];
+  // Carica le partite reali dall'API
+  const fetchMatches = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/football?endpoint=competitions/${selectedLeague}/matches&matchday=${matchday}`
+      );
+      const data = await res.json();
 
-  // Classifica di prova
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      if (data.matches) {
+        setMatches(data.matches);
+      } else {
+        setMatches([]);
+      }
+    } catch (err) {
+      setError(err.message || 'Impossibile caricare il calendario.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMatches();
+  }, [selectedLeague, matchday]);
+
+  // Classifica di prova (verrà automatizzata al salvataggio pronostici)
   const leaderboard = [
     { rank: 1, name: 'Marco (Tu)', matchdayPts: 6, totalPts: 142, exactScores: 2 },
     { rank: 2, name: 'Luca', matchdayPts: 4, totalPts: 138, exactScores: 1 },
@@ -63,15 +66,11 @@ export default function Home() {
 
   // Calcola automaticamente l'esito 1X2 considerando 0 di default se un valore è presente
   const calculateOutcome = (homeVal, awayVal) => {
-    // Se entrambi i campi sono vuoti o non definiti, non calcolare
     const isHomeEmpty = homeVal === '' || homeVal === undefined || homeVal === null;
     const isAwayEmpty = awayVal === '' || awayVal === undefined || awayVal === null;
 
-    if (isHomeEmpty && isAwayEmpty) {
-      return null;
-    }
+    if (isHomeEmpty && isAwayEmpty) return null;
 
-    // Se almeno uno è stato toccato/inserito, l'altro assume valore 0 di default
     const h = isHomeEmpty ? 0 : parseInt(homeVal, 10);
     const a = isAwayEmpty ? 0 : parseInt(awayVal, 10);
 
@@ -114,6 +113,18 @@ export default function Home() {
     }));
   };
 
+  const formatDate = (utcDate) => {
+    if (!utcDate) return '';
+    const d = new Date(utcDate);
+    return d.toLocaleDateString('it-IT', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 font-sans pb-24 max-w-md mx-auto shadow-2xl border-x border-slate-200">
       {/* Header chiaro con gradiente sportivo */}
@@ -122,9 +133,12 @@ export default function Home() {
           <Trophy className="w-6 h-6 text-amber-300" />
           <h1 className="font-bold text-lg tracking-wide">Lega Pronostici</h1>
         </div>
-        <div className="bg-emerald-900/60 text-emerald-100 text-xs px-3 py-1 rounded-full font-medium border border-emerald-400/30">
-          Lega #8492
-        </div>
+        <button
+          onClick={fetchMatches}
+          className="bg-emerald-900/60 hover:bg-emerald-900 text-emerald-100 p-1.5 rounded-full border border-emerald-400/30 transition-all"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+        </button>
       </header>
 
       {/* Selector Campionato */}
@@ -168,101 +182,134 @@ export default function Home() {
               </div>
             </div>
 
-            {matches.map((match) => {
-              const currentPred = userPredictions[match.id] || {};
-              const currentOutcome = currentPred.outcome;
+            {loading && (
+              <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-500 space-y-2">
+                <RefreshCw className="w-6 h-6 animate-spin mx-auto text-emerald-600" />
+                <p className="text-xs font-semibold">Caricamento partite in corso...</p>
+              </div>
+            )}
 
-              return (
-                <div key={match.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 space-y-3">
-                  <div className="flex justify-between items-center text-xs text-slate-500 border-b border-slate-100 pb-2">
-                    <span className="font-medium">{match.time}</span>
-                    <span
-                      className={`font-bold px-2 py-0.5 rounded-md text-[11px] ${
-                        match.status === 'FINISHED'
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-amber-100 text-amber-700'
-                      }`}
-                    >
-                      {match.status === 'FINISHED' ? 'Finale' : 'Aperto'}
-                    </span>
-                  </div>
+            {error && (
+              <div className="bg-red-50 text-red-600 p-4 rounded-2xl border border-red-200 text-xs text-center font-medium">
+                {error}
+              </div>
+            )}
 
-                  {/* Squadre e Risultati Reali */}
-                  <div className="flex justify-between items-center py-1">
-                    <span className="font-bold text-slate-800 text-base w-1/3 text-right">{match.home}</span>
-                    <div className="bg-slate-100 px-3 py-1.5 rounded-xl font-mono font-bold text-sm text-center border border-slate-200 min-w-[60px]">
-                      {match.status === 'FINISHED' ? `${match.realHomeScore} - ${match.realAwayScore}` : 'VS'}
+            {!loading && !error && matches.length === 0 && (
+              <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-500 text-xs">
+                Nessuna partita trovata per questa giornata.
+              </div>
+            )}
+
+            {!loading &&
+              !error &&
+              matches.map((match) => {
+                const currentPred = userPredictions[match.id] || {};
+                const currentOutcome = currentPred.outcome;
+                const isFinished = match.status === 'FINISHED';
+
+                return (
+                  <div
+                    key={match.id}
+                    className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 space-y-3"
+                  >
+                    <div className="flex justify-between items-center text-xs text-slate-500 border-b border-slate-100 pb-2">
+                      <span className="font-medium">{formatDate(match.utcDate)}</span>
+                      <span
+                        className={`font-bold px-2 py-0.5 rounded-md text-[11px] ${
+                          isFinished
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-amber-100 text-amber-700'
+                        }`}
+                      >
+                        {isFinished ? 'Finale' : 'In Programma'}
+                      </span>
                     </div>
-                    <span className="font-bold text-slate-800 text-base w-1/3 text-left">{match.away}</span>
-                  </div>
 
-                  {/* Modulo Pronostico */}
-                  <div className="bg-slate-50 p-3 rounded-xl space-y-3 border border-slate-200/80">
-                    {/* Risultato Esatto */}
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-slate-600 font-semibold">Risultato Esatto:</span>
-                      <div className="flex items-center space-x-2">
+                    {/* Squadre e Risultati Reali */}
+                    <div className="flex justify-between items-center py-1">
+                      <span className="font-bold text-slate-800 text-sm w-1/3 text-right">
+                        {match.homeTeam?.shortName || match.homeTeam?.name}
+                      </span>
+                      <div className="bg-slate-100 px-3 py-1.5 rounded-xl font-mono font-bold text-sm text-center border border-slate-200 min-w-[60px]">
+                        {isFinished
+                          ? `${match.score.fullTime.home} - ${match.score.fullTime.away}`
+                          : 'VS'}
+                      </div>
+                      <span className="font-bold text-slate-800 text-sm w-1/3 text-left">
+                        {match.awayTeam?.shortName || match.awayTeam?.name}
+                      </span>
+                    </div>
+
+                    {/* Modulo Pronostico */}
+                    <div className="bg-slate-50 p-3 rounded-xl space-y-3 border border-slate-200/80">
+                      {/* Risultato Esatto */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-slate-600 font-semibold">Risultato Esatto:</span>
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="0"
+                            value={currentPred.homeScore ?? ''}
+                            onChange={(e) => handleScoreChange(match.id, 'homeScore', e.target.value)}
+                            className="w-12 bg-white text-center text-xs py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold shadow-sm"
+                          />
+                          <span className="text-xs text-slate-400 font-bold">-</span>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="0"
+                            value={currentPred.awayScore ?? ''}
+                            onChange={(e) => handleScoreChange(match.id, 'awayScore', e.target.value)}
+                            className="w-12 bg-white text-center text-xs py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold shadow-sm"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Esito 1X2 Evidenziato di Verde */}
+                      <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
+                        <span className="text-xs text-slate-500 font-medium">Esito:</span>
+                        <div className="grid grid-cols-3 gap-1.5 w-36">
+                          {['1', 'X', '2'].map((outcome) => {
+                            const isActive = currentOutcome === outcome;
+                            return (
+                              <div
+                                key={outcome}
+                                className={`py-1.5 rounded-lg text-center text-xs font-black transition-all border ${
+                                  isActive
+                                    ? 'bg-emerald-500 text-white border-emerald-600 shadow-md scale-105'
+                                    : 'bg-slate-200/70 text-slate-400 border-slate-200'
+                                }`}
+                              >
+                                {outcome}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Marcatore */}
+                      <div className="flex items-center space-x-2 pt-1 border-t border-slate-200/60">
+                        <span className="text-xs text-slate-600 w-24 font-medium">Marcatore:</span>
                         <input
-                          type="number"
-                          min="0"
-                          placeholder="0"
-                          value={currentPred.homeScore ?? ''}
-                          onChange={(e) => handleScoreChange(match.id, 'homeScore', e.target.value)}
-                          className="w-12 bg-white text-center text-xs py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold shadow-sm"
-                        />
-                        <span className="text-xs text-slate-400 font-bold">-</span>
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="0"
-                          value={currentPred.awayScore ?? ''}
-                          onChange={(e) => handleScoreChange(match.id, 'awayScore', e.target.value)}
-                          className="w-12 bg-white text-center text-xs py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold shadow-sm"
+                          type="text"
+                          placeholder="Es. Rossi"
+                          value={currentPred.scorer ?? ''}
+                          onChange={(e) => handleScorerChange(match.id, e.target.value)}
+                          className="flex-1 bg-white px-2.5 py-1 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
                         />
                       </div>
                     </div>
-
-                    {/* Esito 1X2 Evidenziato di Verde se selezionato */}
-                    <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
-                      <span className="text-xs text-slate-500 font-medium">Esito:</span>
-                      <div className="grid grid-cols-3 gap-1.5 w-36">
-                        {['1', 'X', '2'].map((outcome) => {
-                          const isActive = currentOutcome === outcome;
-                          return (
-                            <div
-                              key={outcome}
-                              className={`py-1.5 rounded-lg text-center text-xs font-black transition-all border ${
-                                isActive
-                                  ? 'bg-emerald-500 text-white border-emerald-600 shadow-md scale-105'
-                                  : 'bg-slate-200/70 text-slate-400 border-slate-200'
-                              }`}
-                            >
-                              {outcome}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Marcatore */}
-                    <div className="flex items-center space-x-2 pt-1 border-t border-slate-200/60">
-                      <span className="text-xs text-slate-600 w-24 font-medium">Marcatore:</span>
-                      <input
-                        type="text"
-                        placeholder="Es. Rossi"
-                        value={currentPred.scorer ?? ''}
-                        onChange={(e) => handleScorerChange(match.id, e.target.value)}
-                        className="flex-1 bg-white px-2.5 py-1 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
-                      />
-                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
 
-            <button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-all text-sm">
-              Salva Pronostici
-            </button>
+            {!loading && matches.length > 0 && (
+              <button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-all text-sm">
+                Salva Pronostici
+              </button>
+            )}
           </div>
         )}
 
@@ -346,32 +393,10 @@ export default function Home() {
             </div>
           </div>
         )}
-
-        {/* TAB 4: IMPOSTAZIONI */}
-        {activeTab === 'settings' && (
-          <div className="space-y-4">
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
-              <h3 className="font-bold text-sm text-slate-800">Configurazione API Football</h3>
-              <p className="text-xs text-slate-500">
-                Inserisci qui la tua chiave API per scaricare le partite in tempo reale:
-              </p>
-              <input
-                type="password"
-                placeholder="API Key"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                className="w-full bg-slate-50 p-2.5 rounded-xl text-xs border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-              <button className="w-full bg-emerald-600 text-white text-xs font-bold py-2.5 rounded-xl shadow-sm hover:bg-emerald-700">
-                Salva Chiave API
-              </button>
-            </div>
-          </div>
-        )}
       </main>
 
-      {/* Bottom Navigation chiara */}
-      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur border-t border-slate-200 grid grid-cols-4 py-2 z-50 shadow-lg">
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur border-t border-slate-200 grid grid-cols-3 py-2 z-50 shadow-lg">
         <button
           onClick={() => setActiveTab('matches')}
           className={`flex flex-col items-center space-y-1 ${
@@ -400,16 +425,6 @@ export default function Home() {
         >
           <Users className="w-5 h-5" />
           <span className="text-[10px]">Lega</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('settings')}
-          className={`flex flex-col items-center space-y-1 ${
-            activeTab === 'settings' ? 'text-emerald-600 font-bold' : 'text-slate-400'
-          }`}
-        >
-          <Settings className="w-5 h-5" />
-          <span className="text-[10px]">API</span>
         </button>
       </nav>
     </div>
