@@ -90,10 +90,10 @@ export default function Home() {
   ];
 
   const nationalSquads = {
-    ITA: ['Mateo Retegui', 'Nicolò Barella', 'Davide Frattesi', 'Lorenzo Pellegrini', 'Federico Dimarco', 'Giacomo Raspadori'],
+    ITA: ['Moise Kean', 'Nicolò Barella', 'Davide Frattesi', 'Pio Esposito', 'Federico Dimarco', 'Giacomo Raspadori'],
     BEL: ['Romelu Lukaku', 'Kevin De Bruyne', 'Jeremy Doku', 'Loïs Openda', 'Leandro Trossard', 'Youri Tielemans'],
     TUR: ['Arda Güler', 'Hakan Çalhanoğlu', 'Kenan Yıldız', 'Barış Alper Yılmaz', 'Kerem Aktürkoğlu'],
-    FRA: ['Kylian Mbappé', 'Antoine Griezmann', 'Marcus Thuram', 'Ousmane Dembélé', 'Randal Kolo Muani'],
+    FRA: ['Kylian Mbappé', 'Marcus Thuram', 'Ousmane Dembélé', 'Randal Kolo Muani'],
     HUN: ['Dominik Szoboszlai', 'Barnabás Varga', 'Roland Sallai'],
     UKR: ['Artem Dovbyk', 'Mykhailo Mudryk', 'Viktor Tsygankov'],
     SWE: ['Viktor Gyökeres', 'Alexander Isak', 'Dejan Kulusevski'],
