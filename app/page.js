@@ -12,13 +12,13 @@ export default function Home() {
   const [userPredictions, setUserPredictions] = useState({});
   const [copied, setCopied] = useState(false);
 
-  // Stato per la gestione dell'Utente e della Lega (Senza Registrazione)
+  // Stato Gestione Utente (Senza Login)
   const [userName, setUserName] = useState('');
   const [joinedLeagueCode, setJoinedLeagueCode] = useState('');
   const [inputName, setInputName] = useState('');
   const [inputCode, setInputCode] = useState('');
 
-  // Stato per i dati dall'API
+  // Stato Dati API
   const [matches, setMatches] = useState([]);
   const [teamsSquads, setTeamsSquads] = useState({});
   const [loading, setLoading] = useState(true);
@@ -26,32 +26,29 @@ export default function Home() {
   const [syncMessage, setSyncMessage] = useState('');
   const [error, setError] = useState(null);
 
-  // Campionati supportati
-  const leagues = [
-    { id: 'SA', name: 'Serie A', country: '🇮🇹' },
-    { id: 'PL', name: 'Premier League', country: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
-    { id: 'PD', name: 'La Liga', country: '🇪🇸' },
-    { id: 'FL1', name: 'Ligue 1', country: '🇫🇷' },
-    { id: 'CL', name: 'Champions League', country: '🇪🇺' },
-    { id: 'EL', name: 'Europa League', country: '🇪🇺' },
-  ];
-
-  // Controlla il link di invito e la sessione salvata all'avvio
+  // Controlla il link di invito e la sessione locale all'avvio
   useEffect(() => {
-    // 1. Controlla se c'è un codice invito nell'URL (es. ?code=LEGA-8492)
     const urlParams = new URLSearchParams(window.location.search);
     const codeFromUrl = urlParams.get('code');
     if (codeFromUrl) {
       setInputCode(codeFromUrl.toUpperCase());
     }
 
-    // 2. Recupera dati sessione locale
     const savedName = localStorage.getItem('user_nickname');
     const savedLeague = localStorage.getItem('user_league_code');
+    const savedPreds = localStorage.getItem('user_predictions');
+
     if (savedName) setUserName(savedName);
     if (savedLeague) setJoinedLeagueCode(savedLeague);
+    if (savedPreds) {
+      try {
+        setUserPredictions(JSON.parse(savedPreds));
+      } catch (e) {
+        console.error(e);
+      }
+    }
 
-    // 3. Carica le rose salvate nel localStorage
+    // Carica le rose dal localStorage
     const loadedSquads = {};
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -67,13 +64,18 @@ export default function Home() {
     setTeamsSquads(loadedSquads);
   }, []);
 
-  // Gestione Ingresso in Lega / Creazione Profilo Rapido
+  // Salva i pronostici nel localStorage
+  const savePredictionsToStorage = (newPredictions) => {
+    setUserPredictions(newPredictions);
+    localStorage.setItem('user_predictions', JSON.stringify(newPredictions));
+  };
+
+  // Ingresso Rapido in Lega
   const handleJoinLeague = (e) => {
     e.preventDefault();
     if (!inputName.trim()) return;
 
     const finalCode = inputCode.trim() ? inputCode.trim().toUpperCase() : 'LEGA-8492';
-    
     localStorage.setItem('user_nickname', inputName.trim());
     localStorage.setItem('user_league_code', finalCode);
 
@@ -81,7 +83,6 @@ export default function Home() {
     setJoinedLeagueCode(finalCode);
   };
 
-  // Logout / Esci dalla Lega
   const handleLeaveLeague = () => {
     localStorage.removeItem('user_nickname');
     localStorage.removeItem('user_league_code');
@@ -89,7 +90,7 @@ export default function Home() {
     setJoinedLeagueCode('');
   };
 
-  // Funzioni di Condivisione
+  // Condivisione WhatsApp e Copia Link
   const handleCopyLink = () => {
     const inviteUrl = `${window.location.origin}/?code=${joinedLeagueCode || 'LEGA-8492'}`;
     navigator.clipboard.writeText(inviteUrl);
@@ -105,7 +106,17 @@ export default function Home() {
     window.open(`https://wa.me/?text=${message}`, '_blank');
   };
 
-  // Funzione On-Demand per aggiornare le rose della singola lega selezionata
+  // Campionati Supportati
+  const leagues = [
+    { id: 'SA', name: 'Serie A', country: '🇮🇹' },
+    { id: 'PL', name: 'Premier League', country: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
+    { id: 'PD', name: 'La Liga', country: '🇪🇸' },
+    { id: 'FL1', name: 'Ligue 1', country: '🇫🇷' },
+    { id: 'CL', name: 'Champions League', country: '🇪🇺' },
+    { id: 'EL', name: 'Europa League', country: '🇪🇺' },
+  ];
+
+  // Aggiornamento Rose On-Demand
   const syncSelectedLeagueSquads = async () => {
     setSyncingSquads(true);
     const selectedLeagueName = leagues.find((l) => l.id === targetSyncLeague)?.name || targetSyncLeague;
@@ -153,7 +164,7 @@ export default function Home() {
     }
   };
 
-  // Carica la giornata corrente e le relative partite dall'API
+  // Carica le partite dall'API
   const fetchMatches = async (forcedMatchday = null) => {
     setLoading(true);
     setError(null);
@@ -196,15 +207,61 @@ export default function Home() {
     fetchMatches(null);
   }, [selectedLeague]);
 
-  // Classifica di prova
-  const leaderboard = [
-    { rank: 1, name: `${userName || 'Marco'} (Tu)`, matchdayPts: 6, totalPts: 142, exactScores: 2 },
-    { rank: 2, name: 'Luca', matchdayPts: 4, totalPts: 138, exactScores: 1 },
-    { rank: 3, name: 'Giulia', matchdayPts: 1, totalPts: 130, exactScores: 0 },
-    { rank: 4, name: 'Matteo', matchdayPts: 0, totalPts: 125, exactScores: 1 },
-  ];
+  // ALGORITMO VERIFICA E CALCOLO PUNTEGGI AUTOMATICO
+  const calculateUserScore = () => {
+    let matchdayPts = 0;
+    let exactScoresCount = 0;
 
-  // Calcola automaticamente l'esito 1X2
+    matches.forEach((match) => {
+      if (match.status !== 'FINISHED') return;
+
+      const pred = userPredictions[match.id];
+      if (!pred) return;
+
+      const realHome = match.score.fullTime.home;
+      const realAway = match.score.fullTime.away;
+
+      let realOutcome = 'X';
+      if (realHome > realAway) realOutcome = '1';
+      if (realHome < realAway) realOutcome = '2';
+
+      const isExactScore =
+        parseInt(pred.homeScore, 10) === realHome &&
+        parseInt(pred.awayScore, 10) === realAway;
+
+      // 1. Risultato Esatto (3 Punti) OPPURE Esito 1X2 (1 Punto)
+      if (isExactScore) {
+        matchdayPts += 3;
+        exactScoresCount++;
+      } else if (pred.outcome === realOutcome) {
+        matchdayPts += 1;
+      }
+
+      // 2. Marcatore Esatto (+2 Punti per ogni marcatore indovinato)
+      if (pred.scorer && match.goals && Array.isArray(match.goals)) {
+        const hasScored = match.goals.some((g) =>
+          g.scorer?.name?.toLowerCase().includes(pred.scorer.toLowerCase())
+        );
+        if (hasScored) {
+          matchdayPts += 2;
+        }
+      }
+    });
+
+    return { matchdayPts, exactScoresCount };
+  };
+
+  const { matchdayPts, exactScoresCount } = calculateUserScore();
+
+  // Classifica Dinamica
+  const leaderboard = [
+    { rank: 1, name: `${userName || 'Utente'} (Tu)`, matchdayPts: matchdayPts, totalPts: 120 + matchdayPts, exactScores: exactScoresCount },
+    { rank: 2, name: 'Luca', matchdayPts: 4, totalPts: 118, exactScores: 1 },
+    { rank: 3, name: 'Giulia', matchdayPts: 1, totalPts: 110, exactScores: 0 },
+    { rank: 4, name: 'Matteo', matchdayPts: 0, totalPts: 105, exactScores: 1 },
+  ].sort((a, b) => (standingsType === 'matchday' ? b.matchdayPts - a.matchdayPts : b.totalPts - a.totalPts));
+
+  // Calcolo Esito 1X2 in fase di input
   const calculateOutcome = (homeVal, awayVal) => {
     const isHomeEmpty = homeVal === '' || homeVal === undefined || homeVal === null;
     const isAwayEmpty = awayVal === '' || awayVal === undefined || awayVal === null;
@@ -221,36 +278,37 @@ export default function Home() {
   };
 
   const handleScoreChange = (matchId, team, value) => {
-    setUserPredictions((prev) => {
-      const currentMatchPred = prev[matchId] || { homeScore: '', awayScore: '', scorer: '' };
-      const updatedMatchPred = {
-        ...currentMatchPred,
-        [team]: value,
-      };
+    const currentMatchPred = userPredictions[matchId] || { homeScore: '', awayScore: '', scorer: '' };
+    const updatedMatchPred = {
+      ...currentMatchPred,
+      [team]: value,
+    };
 
-      const computedOutcome = calculateOutcome(
-        updatedMatchPred.homeScore,
-        updatedMatchPred.awayScore
-      );
+    const computedOutcome = calculateOutcome(
+      updatedMatchPred.homeScore,
+      updatedMatchPred.awayScore
+    );
 
-      return {
-        ...prev,
-        [matchId]: {
-          ...updatedMatchPred,
-          outcome: computedOutcome,
-        },
-      };
-    });
+    const newPredictions = {
+      ...userPredictions,
+      [matchId]: {
+        ...updatedMatchPred,
+        outcome: computedOutcome,
+      },
+    };
+
+    savePredictionsToStorage(newPredictions);
   };
 
   const handleScorerChange = (matchId, value) => {
-    setUserPredictions((prev) => ({
-      ...prev,
+    const newPredictions = {
+      ...userPredictions,
       [matchId]: {
-        ...prev[matchId],
+        ...userPredictions[matchId],
         scorer: value,
       },
-    }));
+    };
+    savePredictionsToStorage(newPredictions);
   };
 
   const handleMatchdayChange = (newMatchday) => {
@@ -271,7 +329,7 @@ export default function Home() {
     });
   };
 
-  // SCHERMATA DI BENVENUTO / INGRESSO SU INVITO
+  // SCHERMATA BENVENUTO / INGRESSO SENZA REGISTRAZIONE
   if (!userName || !joinedLeagueCode) {
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4 text-slate-800 font-sans">
@@ -526,12 +584,6 @@ export default function Home() {
                   </div>
                 );
               })}
-
-            {!loading && matches.length > 0 && (
-              <button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-all text-sm">
-                Salva Pronostici
-              </button>
-            )}
           </div>
         )}
 
@@ -573,7 +625,7 @@ export default function Home() {
                           : 'bg-slate-100 text-slate-500'
                       }`}
                     >
-                      {user.rank}
+                      {idx + 1}
                     </span>
                     <span className="font-semibold text-sm text-slate-800">{user.name}</span>
                   </div>
@@ -592,7 +644,7 @@ export default function Home() {
         {/* TAB 3: LEGA */}
         {activeTab === 'league' && (
           <div className="space-y-4">
-            {/* Box Info Profilo */}
+            {/* Box Profilo Attivo */}
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="bg-emerald-100 p-2.5 rounded-xl text-emerald-700 font-bold">
