@@ -26,6 +26,84 @@ export default function Home() {
   const [syncMessage, setSyncMessage] = useState('');
   const [error, setError] = useState(null);
 
+  // Campionati supportati (inclusa la Nations League per il test di oggi)
+  const leagues = [
+    { id: 'SA', name: 'Serie A', country: '🇮🇹' },
+    { id: 'UNL', name: 'Nations League', country: '🇪🇺' },
+    { id: 'PL', name: 'Premier League', country: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
+    { id: 'PD', name: 'La Liga', country: '🇪🇸' },
+    { id: 'FL1', name: 'Ligue 1', country: '🇫🇷' },
+    { id: 'CL', name: 'Champions League', country: '🇪🇺' },
+    { id: 'EL', name: 'Europa League', country: '🇪🇺' },
+  ];
+
+  // Partite e Rose statiche di Nations League per il test
+  const nationsLeagueMatches = [
+    {
+      id: 'unl-1',
+      homeTeam: { name: 'Italia', shortName: 'Italia', id: 'ITA' },
+      awayTeam: { name: 'Belgio', shortName: 'Belgio', id: 'BEL' },
+      utcDate: '2026-09-25T20:45:00Z',
+      status: 'SCHEDULED',
+      score: { fullTime: { home: null, away: null } }
+    },
+    {
+      id: 'unl-2',
+      homeTeam: { name: 'Turchia', shortName: 'Turchia', id: 'TUR' },
+      awayTeam: { name: 'Francia', shortName: 'Francia', id: 'FRA' },
+      utcDate: '2026-09-25T20:45:00Z',
+      status: 'SCHEDULED',
+      score: { fullTime: { home: null, away: null } }
+    },
+    {
+      id: 'unl-3',
+      homeTeam: { name: 'Ungheria', shortName: 'Ungheria', id: 'HUN' },
+      awayTeam: { name: 'Ucraina', shortName: 'Ucraina', id: 'UKR' },
+      utcDate: '2026-09-25T20:45:00Z',
+      status: 'SCHEDULED',
+      score: { fullTime: { home: null, away: null } }
+    },
+    {
+      id: 'unl-4',
+      homeTeam: { name: 'Svezia', shortName: 'Svezia', id: 'SWE' },
+      awayTeam: { name: 'Romania', shortName: 'Romania', id: 'ROU' },
+      utcDate: '2026-09-25T20:45:00Z',
+      status: 'SCHEDULED',
+      score: { fullTime: { home: null, away: null } }
+    },
+    {
+      id: 'unl-5',
+      homeTeam: { name: 'Polonia', shortName: 'Polonia', id: 'POL' },
+      awayTeam: { name: 'Bosnia', shortName: 'Bosnia', id: 'BIH' },
+      utcDate: '2026-09-25T20:45:00Z',
+      status: 'SCHEDULED',
+      score: { fullTime: { home: null, away: null } }
+    },
+    {
+      id: 'unl-6',
+      homeTeam: { name: 'Georgia', shortName: 'Georgia', id: 'GEO' },
+      awayTeam: { name: 'Irlanda Nord', shortName: 'Irlanda Nord', id: 'NIR' },
+      utcDate: '2026-09-25T18:00:00Z',
+      status: 'IN_PROGRESS',
+      score: { fullTime: { home: 0, away: 0 } }
+    }
+  ];
+
+  const nationalSquads = {
+    ITA: ['Mateo Retegui', 'Nicolò Barella', 'Davide Frattesi', 'Lorenzo Pellegrini', 'Federico Dimarco', 'Giacomo Raspadori'],
+    BEL: ['Romelu Lukaku', 'Kevin De Bruyne', 'Jeremy Doku', 'Loïs Openda', 'Leandro Trossard', 'Youri Tielemans'],
+    TUR: ['Arda Güler', 'Hakan Çalhanoğlu', 'Kenan Yıldız', 'Barış Alper Yılmaz', 'Kerem Aktürkoğlu'],
+    FRA: ['Kylian Mbappé', 'Antoine Griezmann', 'Marcus Thuram', 'Ousmane Dembélé', 'Randal Kolo Muani'],
+    HUN: ['Dominik Szoboszlai', 'Barnabás Varga', 'Roland Sallai'],
+    UKR: ['Artem Dovbyk', 'Mykhailo Mudryk', 'Viktor Tsygankov'],
+    SWE: ['Viktor Gyökeres', 'Alexander Isak', 'Dejan Kulusevski'],
+    ROU: ['Denis Drăguș', 'Răzvan Marin', 'Nicolae Stanciu'],
+    POL: ['Robert Lewandowski', 'Karol Świderski', 'Piotr Zieliński'],
+    BIH: ['Edin Džeko', 'Ermedin Demirović', 'Rade Krunić'],
+    GEO: ['Khvicha Kvaratskhelia', 'Georges Mikautadze'],
+    NIR: ['Dion Charles', 'Isaac Price']
+  };
+
   // Controlla il link di invito e la sessione locale all'avvio
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -106,17 +184,7 @@ export default function Home() {
     window.open(`https://wa.me/?text=${message}`, '_blank');
   };
 
-  // Campionati Supportati
-  const leagues = [
-    { id: 'SA', name: 'Serie A', country: '🇮🇹' },
-    { id: 'PL', name: 'Premier League', country: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
-    { id: 'PD', name: 'La Liga', country: '🇪🇸' },
-    { id: 'FL1', name: 'Ligue 1', country: '🇫🇷' },
-    { id: 'CL', name: 'Champions League', country: '🇪🇺' },
-    { id: 'EL', name: 'Europa League', country: '🇪🇺' },
-  ];
-
-  // Aggiornamento Rose On-Demand
+  // Aggiornamento Rose On-Demand (API)
   const syncSelectedLeagueSquads = async () => {
     setSyncingSquads(true);
     const selectedLeagueName = leagues.find((l) => l.id === targetSyncLeague)?.name || targetSyncLeague;
@@ -164,10 +232,18 @@ export default function Home() {
     }
   };
 
-  // Carica le partite dall'API
+  // Carica le partite dall'API oppure usa quelle di test per Nations League
   const fetchMatches = async (forcedMatchday = null) => {
     setLoading(true);
     setError(null);
+
+    if (selectedLeague === 'UNL') {
+      setMatches(nationsLeagueMatches);
+      setMatchday(1);
+      setLoading(false);
+      return;
+    }
+
     try {
       let targetMatchday = forcedMatchday || matchday;
 
@@ -255,11 +331,8 @@ export default function Home() {
 
   // Classifica Dinamica
   const leaderboard = [
-    { rank: 1, name: `${userName || 'Utente'} (Tu)`, matchdayPts: matchdayPts, totalPts: 120 + matchdayPts, exactScores: exactScoresCount },
-    { rank: 2, name: 'Luca', matchdayPts: 4, totalPts: 118, exactScores: 1 },
-    { rank: 3, name: 'Giulia', matchdayPts: 1, totalPts: 110, exactScores: 0 },
-    { rank: 4, name: 'Matteo', matchdayPts: 0, totalPts: 105, exactScores: 1 },
-  ].sort((a, b) => (standingsType === 'matchday' ? b.matchdayPts - a.matchdayPts : b.totalPts - a.totalPts));
+    { rank: 1, name: `${userName || 'Utente'} (Tu)`, matchdayPts: matchdayPts, totalPts: matchdayPts, exactScores: exactScoresCount }
+  ];
 
   // Calcolo Esito 1X2 in fase di input
   const calculateOutcome = (homeVal, awayVal) => {
@@ -425,25 +498,27 @@ export default function Home() {
         {/* TAB 1: PARTITE E PRONOSTICI */}
         {activeTab === 'matches' && (
           <div className="space-y-4">
-            <div className="flex justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-slate-200">
-              <span className="text-sm font-bold text-slate-700">
-                {matchday ? `Giornata ${matchday}` : 'Caricamento...'}
-              </span>
-              <div className="flex space-x-1">
-                <button
-                  onClick={() => handleMatchdayChange((matchday || 1) - 1)}
-                  className="px-2.5 py-1 bg-slate-100 text-slate-600 text-xs rounded-lg font-semibold hover:bg-slate-200 border border-slate-200"
-                >
-                  &lt; Pres
-                </button>
-                <button
-                  onClick={() => handleMatchdayChange((matchday || 1) + 1)}
-                  className="px-2.5 py-1 bg-slate-100 text-slate-600 text-xs rounded-lg font-semibold hover:bg-slate-200 border border-slate-200"
-                >
-                  Succ &gt;
-                </button>
+            {selectedLeague !== 'UNL' && (
+              <div className="flex justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-slate-200">
+                <span className="text-sm font-bold text-slate-700">
+                  {matchday ? `Giornata ${matchday}` : 'Caricamento...'}
+                </span>
+                <div className="flex space-x-1">
+                  <button
+                    onClick={() => handleMatchdayChange((matchday || 1) - 1)}
+                    className="px-2.5 py-1 bg-slate-100 text-slate-600 text-xs rounded-lg font-semibold hover:bg-slate-200 border border-slate-200"
+                  >
+                    &lt; Pres
+                  </button>
+                  <button
+                    onClick={() => handleMatchdayChange((matchday || 1) + 1)}
+                    className="px-2.5 py-1 bg-slate-100 text-slate-600 text-xs rounded-lg font-semibold hover:bg-slate-200 border border-slate-200"
+                  >
+                    Succ &gt;
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             {loading && (
               <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-500 space-y-2">
@@ -474,8 +549,13 @@ export default function Home() {
                 const homeName = match.homeTeam?.shortName || match.homeTeam?.name || 'Casa';
                 const awayName = match.awayTeam?.shortName || match.awayTeam?.name || 'Trasferta';
 
-                const homeSquad = teamsSquads[match.homeTeam?.id] || [];
-                const awaySquad = teamsSquads[match.awayTeam?.id] || [];
+                const homeSquad = selectedLeague === 'UNL' 
+                  ? (nationalSquads[match.homeTeam.id] || []) 
+                  : (teamsSquads[match.homeTeam?.id] || []);
+                  
+                const awaySquad = selectedLeague === 'UNL' 
+                  ? (nationalSquads[match.awayTeam.id] || []) 
+                  : (teamsSquads[match.awayTeam?.id] || []);
 
                 return (
                   <div
@@ -716,7 +796,7 @@ export default function Home() {
                   disabled={syncingSquads}
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 >
-                  {leagues.map((l) => (
+                  {leagues.filter(l => l.id !== 'UNL').map((l) => (
                     <option key={l.id} value={l.id}>
                       {l.country} {l.name}
                     </option>
