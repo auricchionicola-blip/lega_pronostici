@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Trophy, Calendar, Users, RefreshCw, Settings, Database } from 'lucide-react';
+import { Trophy, Calendar, Users, RefreshCw, Settings, Database, Share2, Copy, Check, UserCheck, LogOut } from 'lucide-react';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('matches');
@@ -10,7 +10,13 @@ export default function Home() {
   const [matchday, setMatchday] = useState(null);
   const [standingsType, setStandingsType] = useState('matchday');
   const [userPredictions, setUserPredictions] = useState({});
-  const [inviteCode, setInviteCode] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  // Stato per la gestione dell'Utente e della Lega (Senza Registrazione)
+  const [userName, setUserName] = useState('');
+  const [joinedLeagueCode, setJoinedLeagueCode] = useState('');
+  const [inputName, setInputName] = useState('');
+  const [inputCode, setInputCode] = useState('');
 
   // Stato per i dati dall'API
   const [matches, setMatches] = useState([]);
@@ -30,8 +36,22 @@ export default function Home() {
     { id: 'EL', name: 'Europa League', country: '🇪🇺' },
   ];
 
-  // Carica le rose salvate nel localStorage all'avvio
+  // Controlla il link di invito e la sessione salvata all'avvio
   useEffect(() => {
+    // 1. Controlla se c'è un codice invito nell'URL (es. ?code=LEGA-8492)
+    const urlParams = new URLSearchParams(window.location.search);
+    const codeFromUrl = urlParams.get('code');
+    if (codeFromUrl) {
+      setInputCode(codeFromUrl.toUpperCase());
+    }
+
+    // 2. Recupera dati sessione locale
+    const savedName = localStorage.getItem('user_nickname');
+    const savedLeague = localStorage.getItem('user_league_code');
+    if (savedName) setUserName(savedName);
+    if (savedLeague) setJoinedLeagueCode(savedLeague);
+
+    // 3. Carica le rose salvate nel localStorage
     const loadedSquads = {};
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -46,6 +66,44 @@ export default function Home() {
     }
     setTeamsSquads(loadedSquads);
   }, []);
+
+  // Gestione Ingresso in Lega / Creazione Profilo Rapido
+  const handleJoinLeague = (e) => {
+    e.preventDefault();
+    if (!inputName.trim()) return;
+
+    const finalCode = inputCode.trim() ? inputCode.trim().toUpperCase() : 'LEGA-8492';
+    
+    localStorage.setItem('user_nickname', inputName.trim());
+    localStorage.setItem('user_league_code', finalCode);
+
+    setUserName(inputName.trim());
+    setJoinedLeagueCode(finalCode);
+  };
+
+  // Logout / Esci dalla Lega
+  const handleLeaveLeague = () => {
+    localStorage.removeItem('user_nickname');
+    localStorage.removeItem('user_league_code');
+    setUserName('');
+    setJoinedLeagueCode('');
+  };
+
+  // Funzioni di Condivisione
+  const handleCopyLink = () => {
+    const inviteUrl = `${window.location.origin}/?code=${joinedLeagueCode || 'LEGA-8492'}`;
+    navigator.clipboard.writeText(inviteUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleShareWhatsApp = () => {
+    const inviteUrl = `${window.location.origin}/?code=${joinedLeagueCode || 'LEGA-8492'}`;
+    const message = encodeURIComponent(
+      `🏆 Entra nella mia Lega Pronostici!\nClicca qui per giocare subito: ${inviteUrl}`
+    );
+    window.open(`https://wa.me/?text=${message}`, '_blank');
+  };
 
   // Funzione On-Demand per aggiornare le rose della singola lega selezionata
   const syncSelectedLeagueSquads = async () => {
@@ -80,12 +138,11 @@ export default function Home() {
             console.error(`Errore caricamento rosa team ${team.id}:`, e);
           }
 
-          // Pausa di 6 secondi per non superare il limite di 10 chiamate/minuto
           await new Promise((resolve) => setTimeout(resolve, 6000));
         }
 
         setTeamsSquads(updatedSquads);
-        setSyncMessage(`Sincronizzazione completata per ${selectedLeagueName}! Rose salvate in memoria.`);
+        setSyncMessage(`Sincronizzazione completata per ${selectedLeagueName}! Rose salvate.`);
       } else {
         setSyncMessage(`Nessuna squadra trovata per ${selectedLeagueName}.`);
       }
@@ -120,9 +177,7 @@ export default function Home() {
       );
       const data = await res.json();
 
-      if (data.error) {
-        throw new Error(data.error);
-      }
+      if (data.error) throw new Error(data.error);
 
       if (data.matches && data.matches.length > 0) {
         setMatches(data.matches);
@@ -143,13 +198,13 @@ export default function Home() {
 
   // Classifica di prova
   const leaderboard = [
-    { rank: 1, name: 'Marco (Tu)', matchdayPts: 6, totalPts: 142, exactScores: 2 },
+    { rank: 1, name: `${userName || 'Marco'} (Tu)`, matchdayPts: 6, totalPts: 142, exactScores: 2 },
     { rank: 2, name: 'Luca', matchdayPts: 4, totalPts: 138, exactScores: 1 },
     { rank: 3, name: 'Giulia', matchdayPts: 1, totalPts: 130, exactScores: 0 },
     { rank: 4, name: 'Matteo', matchdayPts: 0, totalPts: 125, exactScores: 1 },
   ];
 
-  // Calcola automaticamente l'esito 1X2 considerando 0 di default
+  // Calcola automaticamente l'esito 1X2
   const calculateOutcome = (homeVal, awayVal) => {
     const isHomeEmpty = homeVal === '' || homeVal === undefined || homeVal === null;
     const isAwayEmpty = awayVal === '' || awayVal === undefined || awayVal === null;
@@ -216,13 +271,68 @@ export default function Home() {
     });
   };
 
+  // SCHERMATA DI BENVENUTO / INGRESSO SU INVITO
+  if (!userName || !joinedLeagueCode) {
+    return (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4 text-slate-800 font-sans">
+        <div className="bg-white p-6 rounded-3xl shadow-xl border border-slate-200 max-w-sm w-full space-y-5 text-center">
+          <div className="bg-emerald-100 w-14 h-14 rounded-2xl flex items-center justify-center mx-auto text-emerald-700">
+            <Trophy className="w-8 h-8 text-amber-500" />
+          </div>
+
+          <div>
+            <h1 className="text-xl font-bold text-slate-800">Lega Pronostici</h1>
+            <p className="text-xs text-slate-500 mt-1">
+              Entra nella lega dei tuoi amici senza bisogno di registrarti!
+            </p>
+          </div>
+
+          <form onSubmit={handleJoinLeague} className="space-y-3 text-left">
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1">Il tuo Soprannome:</label>
+              <input
+                type="text"
+                required
+                placeholder="Es. Bomber99"
+                value={inputName}
+                onChange={(e) => setInputName(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1">Codice Invito Lega:</label>
+              <input
+                type="text"
+                placeholder="Es. LEGA-8492"
+                value={inputCode}
+                onChange={(e) => setInputCode(e.target.value.toUpperCase())}
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-mono font-bold tracking-wider text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-md transition-all text-xs"
+            >
+              Entra in Gioco
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 font-sans pb-24 max-w-md mx-auto shadow-2xl border-x border-slate-200">
       {/* Header chiaro */}
       <header className="bg-gradient-to-r from-emerald-700 to-teal-800 text-white p-4 shadow-md sticky top-0 z-50 flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <Trophy className="w-6 h-6 text-amber-300" />
-          <h1 className="font-bold text-lg tracking-wide">Lega Pronostici</h1>
+          <div>
+            <h1 className="font-bold text-sm tracking-wide leading-none">Lega Pronostici</h1>
+            <span className="text-[10px] text-emerald-200 font-medium">{joinedLeagueCode}</span>
+          </div>
         </div>
         <button
           onClick={() => fetchMatches(matchday)}
@@ -482,26 +592,54 @@ export default function Home() {
         {/* TAB 3: LEGA */}
         {activeTab === 'league' && (
           <div className="space-y-4">
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
-              <h3 className="font-bold text-sm text-slate-800">Codice Invito Lega</h3>
-              <p className="text-xs text-slate-500">Condividi questo codice con i tuoi amici:</p>
-              <div className="bg-slate-50 p-3 rounded-xl text-center font-mono font-extrabold text-emerald-700 text-lg tracking-widest border border-slate-200">
-                LEGA-8492
+            {/* Box Info Profilo */}
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="bg-emerald-100 p-2.5 rounded-xl text-emerald-700 font-bold">
+                  <UserCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-xs text-slate-800">{userName}</h4>
+                  <p className="text-[11px] text-slate-400">Lega: {joinedLeagueCode}</p>
+                </div>
               </div>
+              <button
+                onClick={handleLeaveLeague}
+                className="text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all"
+                title="Esci dalla lega"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
 
+            {/* Box Invito Amici */}
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
-              <h3 className="font-bold text-sm text-slate-800">Unisciti a una Lega</h3>
-              <input
-                type="text"
-                placeholder="Inserisci codice invito"
-                value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value)}
-                className="w-full bg-slate-50 p-2.5 rounded-xl text-xs border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-              <button className="w-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold py-2.5 rounded-xl transition-all">
-                Entra nella Lega
-              </button>
+              <h3 className="font-bold text-sm text-slate-800">Invita Amici via WhatsApp</h3>
+              <p className="text-xs text-slate-500">
+                Invia il link diretto ai tuoi amici per farli entrare subito nella tua lega:
+              </p>
+
+              <div className="bg-slate-50 p-3 rounded-xl text-center font-mono font-extrabold text-emerald-700 text-lg tracking-widest border border-slate-200">
+                {joinedLeagueCode}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  onClick={handleShareWhatsApp}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center space-x-1.5 transition-all shadow-sm"
+                >
+                  <Share2 className="w-4 h-4" />
+                  <span>WhatsApp</span>
+                </button>
+
+                <button
+                  onClick={handleCopyLink}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center space-x-1.5 transition-all border border-slate-200"
+                >
+                  {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                  <span>{copied ? 'Copiato!' : 'Copia Link'}</span>
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -515,10 +653,9 @@ export default function Home() {
                 <h3 className="font-bold text-sm text-slate-800">Gestione Dati Rose</h3>
               </div>
               <p className="text-xs text-slate-500 leading-relaxed">
-                Seleziona una lega alla volta da aggiornare on-demand per non superare il limite di chiamate API gratuite.
+                Seleziona una lega alla volta da aggiornare on-demand per i marcatori reali.
               </p>
 
-              {/* Selettore della Lega da aggiornare */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700">Lega da aggiornare:</label>
                 <select
@@ -555,7 +692,7 @@ export default function Home() {
         )}
       </main>
 
-      {/* Bottom Navigation con Impostazioni */}
+      {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur border-t border-slate-200 grid grid-cols-4 py-2 z-50 shadow-lg">
         <button
           onClick={() => setActiveTab('matches')}
