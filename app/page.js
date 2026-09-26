@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Trophy, Calendar, Users, RefreshCw, Settings, Database, Share2, Copy, Check, UserCheck, LogOut, User, AlertCircle, CheckCircle, Save, Play, ChevronRight, Eye, PlusCircle, Layers } from 'lucide-react';
+import { Trophy, Calendar, Users, RefreshCw, Settings, Database, Share2, Copy, Check, UserCheck, LogOut, User, AlertCircle, CheckCircle, Save, Play, ChevronRight, Eye, PlusCircle, Layers, Lock } from 'lucide-react';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('matches');
@@ -11,11 +11,14 @@ export default function Home() {
   const [userPredictions, setUserPredictions] = useState({});
   const [copied, setCopied] = useState(false);
 
+  // Stato Scommessa Attiva (Default: bloccata finché non si clicca Pronostica)
+  const [isEditingPredictions, setIsEditingPredictions] = useState(false);
+
   // Profilo Utente Univoco & Leghe Iscritte
   const [userName, setUserName] = useState('');
   const [inputName, setInputName] = useState('');
   
-  const [userLeagues, setUserLeagues] = useState([]); // Array delle leghe a cui l'utente appartiene
+  const [userLeagues, setUserLeagues] = useState([]);
   const [activeLeagueCode, setActiveLeagueCode] = useState('');
   const [inputNewCode, setInputNewCode] = useState('');
   
@@ -118,7 +121,7 @@ export default function Home() {
     UKR: ['Artem Dovbyk', 'Roman Yaremchuk', 'Mykhailo Mudryk', 'Viktor Tsygankov', 'Heorhiy Sudakov', 'Oleksandr Zinchenko'],
     SWE: ['Viktor Gyökeres', 'Alexander Isak', 'Dejan Kulusevski', 'Anthony Elanga', 'Emil Forsberg'],
     ROU: ['Denis Drăguș', 'George Pușcaș', 'Dennis Man', 'Valentin Mihăilă', 'Răzvan Marin', 'Nicolae Stanciu'],
-    POL: ['Robert Lewandowski', 'Karol Świderski', 'Krzystof Piątek', 'Piotr Zieliński', 'Sebastian Szymański'],
+    POL: ['Robert Lewandowski', 'Karol Świderski', 'Krzysztof Piątek', 'Piotr Zieliński', 'Sebastian Szymański'],
     BIH: ['Edin Džeko', 'Ermedin Demirović', 'Rade Krunić', 'Benjamin Tahirović'],
     GEO: ['Khvicha Kvaratskhelia', 'Georges Mikautadze', 'Zuriko Davitashvili'],
     NIR: ['Dion Charles', 'Josh Magennis', 'Isaac Price', 'Shea Charles']
@@ -318,7 +321,7 @@ export default function Home() {
     setDbStatus({ type: 'success', text: `Passato alla lega ${code}` });
   };
 
-  // RESET COMPLETO PROFILO (Solo se si vuole azzerare il dispositivo)
+  // RESET COMPLETO PROFILO
   const handleResetFullProfile = () => {
     if (confirm('Sei sicuro di voler resettare il tuo profilo utente su questo dispositivo?')) {
       localStorage.clear();
@@ -330,8 +333,29 @@ export default function Home() {
     }
   };
 
+  // VERIFICA SE LA GIORNATA È GIÀ INIZIATA O PASSATA
+  const isMatchdayStartedOrFinished = () => {
+    if (!matches || matches.length === 0) return false;
+    const now = new Date();
+
+    // Se c'è almeno una partita FINISHED o TIMED passata rispetto all'ora attuale
+    return matches.some((m) => {
+      if (m.status === 'FINISHED' || m.status === 'IN_PLAY' || m.status === 'PAUSED') return true;
+      if (m.utcDate) {
+        const matchTime = new Date(m.utcDate);
+        return now >= matchTime;
+      }
+      return false;
+    });
+  };
+
   // INIZIALIZZA PRONOSTICI PER LA GIORNATA ("Pronostica")
   const handleStartPredictionsForMatchday = () => {
+    if (isMatchdayStartedOrFinished()) {
+      setDbStatus({ type: 'error', text: 'Impossibile pronosticare: la prima partita di questa giornata è già iniziata!' });
+      return;
+    }
+
     if (!matches || matches.length === 0) return;
 
     const initialPreds = { ...userPredictions };
@@ -347,11 +371,18 @@ export default function Home() {
     });
 
     setUserPredictions(initialPreds);
-    setDbStatus({ type: 'success', text: 'Pronostici impostati a 0 - 0 (X). Modifica i punteggi e premi "Salva Tutti i Pronostici".' });
+    setIsEditingPredictions(true);
+    setDbStatus({ type: 'success', text: 'Modalità scommessa attivata! Modifica i risultati e clicca "Salva Tutti i Pronostici".' });
   };
 
   // SALVA TUTTI I PRONOSTICI DELLA LEGA CORRENTE
   const handleSaveAllPredictions = async () => {
+    if (isMatchdayStartedOrFinished()) {
+      setDbStatus({ type: 'error', text: 'Tempo scaduto! La giornata è già iniziata e non è più possibile salvare i pronostici.' });
+      setIsEditingPredictions(false);
+      return;
+    }
+
     if (!activeLeagueCode || !userName) return;
 
     setSavingPredictions(true);
@@ -387,6 +418,7 @@ export default function Home() {
 
       if (res.ok && resJson.success) {
         setDbStatus({ type: 'success', text: `Pronostici salvati per la lega ${activeLeagueCode}!` });
+        setIsEditingPredictions(false);
         fetchLeagueData();
       } else {
         setDbStatus({ type: 'error', text: `Errore Salvataggio: ${resJson.error || JSON.stringify(resJson)}` });
@@ -462,9 +494,10 @@ export default function Home() {
     window.open(`https://wa.me/?text=${message}`, '_blank');
   };
 
-  // Carica Partite
+  // CARICA PARTITE (CON AUTOFOCUS SULLA PRIMA GIORNATA FUTURA/IN CORSO)
   const fetchMatches = async (forcedMatchday = null) => {
     setLoading(true);
+    setIsEditingPredictions(false);
 
     if (selectedLeague === 'UNL') {
       setMatches(nationsLeagueMatches);
@@ -474,20 +507,36 @@ export default function Home() {
     }
 
     try {
-      let targetMatchday = forcedMatchday || matchday;
+      let targetMatchday = forcedMatchday;
 
       if (!targetMatchday) {
-        const compRes = await fetch(`/api/football?endpoint=competitions/${selectedLeague}`);
+        // Scarichiamo tutto il calendario della competizione per trovare la prima giornata futura/in corso
+        const compRes = await fetch(`/api/football?endpoint=competitions/${selectedLeague}/matches`);
         const compData = await compRes.json();
-        if (compData.currentSeason?.currentMatchday) {
-          targetMatchday = compData.currentSeason.currentMatchday;
-          setMatchday(targetMatchday);
+
+        if (compData.matches && compData.matches.length > 0) {
+          const now = new Date();
+          // Troviamo la prima partita in programma nel futuro o in corso
+          const upcomingMatch = compData.matches.find((m) => {
+            const mDate = new Date(m.utcDate);
+            return mDate >= now || m.status === 'TIMED' || m.status === 'IN_PLAY';
+          });
+
+          if (upcomingMatch && upcomingMatch.matchday) {
+            targetMatchday = upcomingMatch.matchday;
+          } else {
+            // Se tutte le partite sono concluse, prendiamo l'ultima giornata
+            const lastMatch = compData.matches[compData.matches.length - 1];
+            targetMatchday = lastMatch?.matchday || 1;
+          }
         } else {
           targetMatchday = 1;
-          setMatchday(1);
         }
+
+        setMatchday(targetMatchday);
       }
 
+      // Ora scarichiamo le partite per la giornata identificata
       const res = await fetch(
         `/api/football?endpoint=competitions/${selectedLeague}/matches&matchday=${targetMatchday}`
       );
@@ -573,6 +622,7 @@ export default function Home() {
   };
 
   const handleScoreChange = (matchId, team, value) => {
+    if (!isEditingPredictions) return;
     const currentPred = userPredictions[matchId] || { homeScore: '0', awayScore: '0', scorer: '' };
     const updated = { ...currentPred, [team]: value };
     updated.outcome = calculateOutcome(updated.homeScore, updated.awayScore);
@@ -581,6 +631,7 @@ export default function Home() {
   };
 
   const handleScorerChange = (matchId, value) => {
+    if (!isEditingPredictions) return;
     const currentPred = userPredictions[matchId] || { homeScore: '0', awayScore: '0', scorer: '' };
     const updated = { ...currentPred, scorer: value };
 
@@ -604,6 +655,8 @@ export default function Home() {
       minute: '2-digit',
     });
   };
+
+  const matchdayStarted = isMatchdayStartedOrFinished();
 
   // PRIMA REGISTRAZIONE UTENTE (Se non esiste un nome salvato nel dispositivo)
   if (!userName) {
@@ -754,15 +807,34 @@ export default function Home() {
                   </>
                 )}
 
-                <button
-                  onClick={handleStartPredictionsForMatchday}
-                  className="bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1 shadow-sm transition-all"
-                >
-                  <Play className="w-3 h-3 fill-current" />
-                  <span>Pronostica</span>
-                </button>
+                {/* PULSANTE "PRONOSTICA" O STATO BLOCCATO */}
+                {matchdayStarted ? (
+                  <div className="bg-slate-100 text-slate-500 border border-slate-200 px-2.5 py-1.5 rounded-lg text-[11px] font-bold flex items-center space-x-1">
+                    <Lock className="w-3 h-3 text-red-500" />
+                    <span>Iniziata</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleStartPredictionsForMatchday}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1 shadow-sm transition-all ${
+                      isEditingPredictions
+                        ? 'bg-emerald-700 text-white ring-2 ring-emerald-400'
+                        : 'bg-amber-500 hover:bg-amber-600 text-white'
+                    }`}
+                  >
+                    <Play className="w-3 h-3 fill-current" />
+                    <span>{isEditingPredictions ? 'Modifica In Corso' : 'Pronostica'}</span>
+                  </button>
+                )}
               </div>
             </div>
+
+            {matchdayStarted && (
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 p-2.5 rounded-xl text-xs flex items-center space-x-2">
+                <Lock className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                <span>La giornata è iniziata. I pronostici per queste partite sono bloccati.</span>
+              </div>
+            )}
 
             {loading && (
               <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-500 space-y-2">
@@ -813,18 +885,20 @@ export default function Home() {
                             type="number"
                             min="0"
                             placeholder="0"
+                            disabled={!isEditingPredictions || matchdayStarted}
                             value={currentPred.homeScore ?? '0'}
                             onChange={(e) => handleScoreChange(match.id, 'homeScore', e.target.value)}
-                            className="w-12 bg-white text-center text-xs py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold shadow-sm"
+                            className="w-12 bg-white text-center text-xs py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold shadow-sm disabled:bg-slate-100 disabled:text-slate-500"
                           />
                           <span className="text-xs text-slate-400 font-bold">-</span>
                           <input
                             type="number"
                             min="0"
                             placeholder="0"
+                            disabled={!isEditingPredictions || matchdayStarted}
                             value={currentPred.awayScore ?? '0'}
                             onChange={(e) => handleScoreChange(match.id, 'awayScore', e.target.value)}
-                            className="w-12 bg-white text-center text-xs py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold shadow-sm"
+                            className="w-12 bg-white text-center text-xs py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold shadow-sm disabled:bg-slate-100 disabled:text-slate-500"
                           />
                         </div>
                       </div>
@@ -853,10 +927,11 @@ export default function Home() {
                           <input
                             type="text"
                             list={`players-${match.id}`}
-                            placeholder="Digita o seleziona..."
+                            disabled={!isEditingPredictions || matchdayStarted}
+                            placeholder={isEditingPredictions ? "Digita o seleziona..." : "Nessun marcatore"}
                             value={currentPred.scorer ?? ''}
                             onChange={(e) => handleScorerChange(match.id, e.target.value)}
-                            className="w-full bg-white px-2.5 py-1 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
+                            className="w-full bg-white px-2.5 py-1 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm disabled:bg-slate-100 disabled:text-slate-500"
                           />
                           <datalist id={`players-${match.id}`}>
                             {homeSquad.map((player, idx) => (
@@ -873,7 +948,8 @@ export default function Home() {
                 );
               })}
 
-            {!loading && matches.length > 0 && (
+            {/* TASTO "SALVA TUTTI I PRONOSTICI" VISIBILE SOLO IN MODALITÀ EDITING */}
+            {!loading && matches.length > 0 && isEditingPredictions && !matchdayStarted && (
               <div className="pt-2">
                 <button
                   onClick={handleSaveAllPredictions}
