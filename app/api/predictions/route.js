@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 const baseUrl = 'https://ciklkrqvzaputhoilstl.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpa2xrcXZ6YXB1dGhvaWxzdGwiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc5MDM5Mzc2OSwiZXhwIjoyMTA1OTY5NzY5fQ.gG7bNKaYpX0-qaO6XyBDiizwl1-N0N1pOGIalQMdrGs';
+const supabaseKey = 'sb_publishable_XDgb0Vbh_uuKyB9nc1SZCA__xtJcXOK';
 
 // GET: Legge tutti i pronostici della lega
 export async function GET(request) {
@@ -48,7 +48,6 @@ export async function POST(request) {
 
     if (!res.ok) {
       const errText = await res.text();
-      console.error('Errore Supabase POST:', errText);
       return NextResponse.json({ error: errText }, { status: res.status });
     }
 
