@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Trophy, Calendar, Users, RefreshCw, Settings, Database, Share2, Copy, Check, UserCheck, LogOut, User, AlertCircle, CheckCircle, Save, Play, ChevronRight, Eye, PlusCircle, Layers, Lock, History, Target, Edit3 } from 'lucide-react';
+import { Trophy, Calendar, Users, RefreshCw, Settings, Database, Share2, Copy, Check, UserCheck, LogOut, User, AlertCircle, CheckCircle, Save, Play, ChevronRight, ChevronDown, Eye, PlusCircle, Layers, Lock, History, Target, Edit3, Key, Shield } from 'lucide-react';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('matches');
@@ -24,8 +24,14 @@ export default function Home() {
   
   const [showAddLeagueModal, setShowAddLeagueModal] = useState(false);
 
-  // Dettaglio Utente Selezionato
-  const [selectedMemberDetail, setSelectedMemberDetail] = useState(null);
+  // Password Protezione Rose nelle Impostazioni
+  const [adminPasswordInput, setInputAdminPassword] = useState('');
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+
+  // Stato Espansione Gerarchica Tab Pronostici (Lega -> Utente -> Campionato)
+  const [expandedLeague, setExpandedLeague] = useState(null);
+  const [expandedUser, setExpandedLeagueUser] = useState(null);
+  const [selectedChampFilter, setSelectedChampFilter] = useState('UNL');
 
   // Stato Debug e Log
   const [dbStatus, setDbStatus] = useState(null);
@@ -195,6 +201,7 @@ export default function Home() {
     if (parsedLeagues.length > 0) {
       setUserLeagues(parsedLeagues);
       setActiveLeagueCode(savedActiveLeague || parsedLeagues[0]);
+      setExpandedLeague(savedActiveLeague || parsedLeagues[0]);
     }
 
     const loadedSquads = {};
@@ -288,6 +295,7 @@ export default function Home() {
         setUserName(nick);
         setUserLeagues(newLeaguesList);
         setActiveLeagueCode(firstLeagueCode);
+        setExpandedLeague(firstLeagueCode);
 
         setDbStatus({ type: 'success', text: `Profilo "${nick}" creato e iscritto alla lega ${firstLeagueCode}!` });
         fetchLeagueData();
@@ -313,6 +321,7 @@ export default function Home() {
 
     if (userLeagues.includes(code)) {
       setActiveLeagueCode(code);
+      setExpandedLeague(code);
       localStorage.setItem('user_active_league_code', code);
       setShowAddLeagueModal(false);
       setInputNewCode('');
@@ -341,6 +350,7 @@ export default function Home() {
         const updatedLeagues = [...userLeagues, code];
         setUserLeagues(updatedLeagues);
         setActiveLeagueCode(code);
+        setExpandedLeague(code);
 
         localStorage.setItem('user_leagues_list', JSON.stringify(updatedLeagues));
         localStorage.setItem('user_active_league_code', code);
@@ -393,7 +403,6 @@ export default function Home() {
     });
   };
 
-  // VERIFICA SE L'UTENTE HA GIÀ SALVATO PRONOSTICI PER QUESTA GIORNATA
   const hasUserSavedPredictionsForMatchday = () => {
     if (!matches || matches.length === 0) return false;
     return matches.some((m) => !!userPredictions[m.id]);
@@ -483,7 +492,17 @@ export default function Home() {
     }
   };
 
-  // Sincronizzazione On-Demand delle Rose di Club
+  // SINCRONIZZAZIONE ROSE DI CLUB PROTEGGIUTA DA PASSWORD ("admin")
+  const handleVerifyAndSyncSquads = () => {
+    if (adminPasswordInput.trim() === 'admin') {
+      setShowPasswordModal(false);
+      setInputAdminPassword('');
+      syncSelectedLeagueSquads();
+    } else {
+      alert('Password errata! Inserisci la password corretta per aggiornare le rose.');
+    }
+  };
+
   const syncSelectedLeagueSquads = async () => {
     setSyncingSquads(true);
     const selectedLeagueName = leagues.find((l) => l.id === targetSyncLeague)?.name || targetSyncLeague;
@@ -1219,9 +1238,157 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB 3: LEGA E STORICO DETTAGLIATO SCHEDINE */}
-        {activeTab === 'league' && (
+        {/* TAB 3: PRONOSTICI (GERARCHIA: LEGA -> UTENTI -> CAMPIONATI -> SCHEDINA) */}
+        {activeTab === 'predictions_history' && (
           <div className="space-y-4">
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+              <h3 className="font-bold text-sm text-slate-800 flex items-center space-x-2">
+                <History className="w-4 h-4 text-emerald-600" />
+                <span>Consultazione Pronostici e Schedine</span>
+              </h3>
+              <p className="text-[11px] text-slate-400">
+                Seleziona una lega per esplodere i suoi membri, scegli un utente e filtra per campionato per vederne i dettagli.
+              </p>
+            </div>
+
+            {/* LISTA DELLE LEGHE ESPLODIBILI */}
+            <div className="space-y-3">
+              {userLeagues.map((code) => {
+                const isLeagueExpanded = expandedLeague === code;
+
+                return (
+                  <div key={code} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                    {/* INTESTAZIONE LEGA (ESPLODIBILE) */}
+                    <button
+                      onClick={() => setExpandedLeague(isLeagueExpanded ? null : code)}
+                      className="w-full p-4 bg-slate-50 flex items-center justify-between font-bold text-xs text-slate-800 hover:bg-slate-100 transition-all border-b border-slate-200"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <Layers className="w-4 h-4 text-emerald-600" />
+                        <span>Lega: <strong className="text-emerald-700 text-sm font-mono">{code}</strong></span>
+                      </div>
+                      {isLeagueExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
+                    </button>
+
+                    {/* CONTENUTO LEGA: LISTA UTENTI */}
+                    {isLeagueExpanded && (
+                      <div className="p-3 space-y-3 bg-white">
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1">Membri Iscritti:</p>
+
+                        {leagueMembersList.map((nick) => {
+                          const isUserExpanded = expandedUser === nick;
+
+                          return (
+                            <div key={nick} className="border border-slate-200/80 rounded-xl overflow-hidden">
+                              {/* INTESTAZIONE UTENTE (ESPLODIBILE) */}
+                              <button
+                                onClick={() => setExpandedLeagueUser(isUserExpanded ? null : nick)}
+                                className="w-full p-3 bg-slate-50/60 flex items-center justify-between text-xs font-semibold text-slate-700 hover:bg-slate-100/80 transition-all"
+                              >
+                                <div className="flex items-center space-x-2">
+                                  <User className="w-4 h-4 text-emerald-600" />
+                                  <span>{nick} {nick === userName ? '(Tu)' : ''}</span>
+                                </div>
+                                {isUserExpanded ? <ChevronDown className="w-4 h-4 text-slate-600" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
+                              </button>
+
+                              {/* CONTENUTO UTENTE: SELEZIONE CAMPIONATO E SCHEDINA */}
+                              {isUserExpanded && (
+                                <div className="p-3 bg-slate-50/30 space-y-3 border-t border-slate-200/60">
+                                  {/* FILTRO SELEZIONE CAMPIONATI */}
+                                  <div className="flex space-x-1 overflow-x-auto pb-1">
+                                    {leagues.map((champ) => (
+                                      <button
+                                        key={champ.id}
+                                        onClick={() => setSelectedChampFilter(champ.id)}
+                                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all ${
+                                          selectedChampFilter === champ.id
+                                            ? 'bg-emerald-600 text-white shadow-sm'
+                                            : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                                        }`}
+                                      >
+                                        <span>{champ.country} {champ.name}</span>
+                                      </button>
+                                    ))}
+                                  </div>
+
+                                  {/* LISTA PRONOSTICI DELL'UTENTE PER IL CAMPIONATO SELEZIONATO */}
+                                  <div className="space-y-2 pt-1">
+                                    {allLeaguePredictions
+                                      .filter((p) => p.nickname === nick && p.match_id !== 'JOIN_ENTRY')
+                                      .map((p) => {
+                                        const matchInfo = findMatchDetailsById(p.match_id);
+                                        const homeName = matchInfo?.homeTeam?.shortName || matchInfo?.homeTeam?.name || `Partita #${p.match_id}`;
+                                        const awayName = matchInfo?.awayTeam?.shortName || matchInfo?.awayTeam?.name || '';
+                                        
+                                        const isFinished = matchInfo?.status === 'FINISHED';
+                                        const realHome = matchInfo?.score?.fullTime?.home;
+                                        const realAway = matchInfo?.score?.fullTime?.away;
+
+                                        const evalResult = evaluateSinglePrediction(p, matchInfo);
+
+                                        return (
+                                          <div key={p.match_id} className={`p-3 rounded-xl border text-xs space-y-1.5 ${evalResult.colorBg}`}>
+                                            <div className="flex justify-between items-start font-bold text-slate-800">
+                                              <div>
+                                                <p className="text-xs font-bold">{awayName ? `${homeName} vs ${awayName}` : homeName}</p>
+                                                {matchInfo?.utcDate && (
+                                                  <span className="text-[9px] text-slate-400 font-normal">{formatDate(matchInfo.utcDate)}</span>
+                                                )}
+                                              </div>
+
+                                              <span className={`px-2 py-0.5 rounded-md text-[9px] font-extrabold ${evalResult.colorText}`}>
+                                                {evalResult.text}
+                                              </span>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-2 bg-white/80 p-2 rounded-lg border border-slate-200/50 text-[10px]">
+                                              <div>
+                                                <span className="text-slate-400 block">Pronostico:</span>
+                                                <span className="font-bold text-emerald-800">{p.home_score} - {p.away_score} ({p.outcome})</span>
+                                              </div>
+
+                                              <div>
+                                                <span className="text-slate-400 block">Reale:</span>
+                                                <span className="font-mono font-bold text-slate-700">
+                                                  {isFinished ? `${realHome} - ${realAway}` : 'In Programma'}
+                                                </span>
+                                              </div>
+                                            </div>
+
+                                            {p.scorer && (
+                                              <div className="text-[10px] text-slate-600 border-t border-slate-200/40 pt-1">
+                                                Marcatori: <strong className="text-slate-800">{p.scorer}</strong>
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+
+                                    {allLeaguePredictions.filter((p) => p.nickname === nick && p.match_id !== 'JOIN_ENTRY').length === 0 && (
+                                      <p className="text-[11px] text-slate-400 p-3 text-center italic">
+                                        Nessun pronostico salvato da questo utente.
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: IMPOSTAZIONI (UTENTE, AGGIUNTA LEGHE, INVITI E PROTEZIONE ROSE) */}
+        {activeTab === 'settings' && (
+          <div className="space-y-4">
+            {/* PROFILO UTENTE FISSO E SELETTORE LEGHE */}
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div className="flex items-center space-x-3">
@@ -1242,6 +1409,7 @@ export default function Home() {
                 </button>
               </div>
 
+              {/* LISTA E SELEZIONE DELLE LEGHE ISCRITTE */}
               <div className="space-y-2 pt-1">
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-bold text-slate-700 flex items-center space-x-1">
@@ -1276,6 +1444,7 @@ export default function Home() {
               </div>
             </div>
 
+            {/* MODALE PER AGGIUNGERE NUOVA LEGA */}
             {showAddLeagueModal && (
               <div className="bg-emerald-50/90 border border-emerald-200 p-4 rounded-2xl space-y-3">
                 <h4 className="font-bold text-xs text-emerald-900">Unisciti o Crea una Nuova Lega</h4>
@@ -1299,106 +1468,23 @@ export default function Home() {
               </div>
             )}
 
-            {/* VISTA DETTAGLIO STORICO PRONOSTICI UTENTE SELEZIONATO */}
-            {selectedMemberDetail ? (
-              <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-                <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                  <div className="flex items-center space-x-2">
-                    <History className="w-4 h-4 text-emerald-600" />
-                    <h3 className="font-bold text-sm text-slate-800">Storico Schedine: {selectedMemberDetail}</h3>
-                  </div>
-                  <button
-                    onClick={() => setSelectedMemberDetail(null)}
-                    className="text-xs text-emerald-600 font-bold hover:underline"
-                  >
-                    Torna all'elenco
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  {allLeaguePredictions
-                    .filter((p) => p.nickname === selectedMemberDetail && p.match_id !== 'JOIN_ENTRY')
-                    .map((p) => {
-                      const matchInfo = findMatchDetailsById(p.match_id);
-                      const homeName = matchInfo?.homeTeam?.shortName || matchInfo?.homeTeam?.name || `Partita #${p.match_id}`;
-                      const awayName = matchInfo?.awayTeam?.shortName || matchInfo?.awayTeam?.name || '';
-                      
-                      const isFinished = matchInfo?.status === 'FINISHED';
-                      const realHome = matchInfo?.score?.fullTime?.home;
-                      const realAway = matchInfo?.score?.fullTime?.away;
-
-                      const evalResult = evaluateSinglePrediction(p, matchInfo);
-
-                      return (
-                        <div key={p.match_id} className={`p-3.5 rounded-2xl border text-xs space-y-2 ${evalResult.colorBg}`}>
-                          <div className="flex justify-between items-start font-bold text-slate-800">
-                            <div>
-                              <p className="text-sm font-bold">{awayName ? `${homeName} vs ${awayName}` : homeName}</p>
-                              {matchInfo?.utcDate && (
-                                <span className="text-[10px] text-slate-400 font-normal">{formatDate(matchInfo.utcDate)}</span>
-                              )}
-                            </div>
-
-                            <span className={`px-2 py-1 rounded-lg text-[10px] font-extrabold ${evalResult.colorText}`}>
-                              {evalResult.text}
-                            </span>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-2 bg-white/70 p-2 rounded-xl border border-slate-200/60 text-[11px]">
-                            <div>
-                              <span className="text-slate-400 block text-[10px]">Pronostico Utente:</span>
-                              <span className="font-bold text-emerald-800">{p.home_score} - {p.away_score} ({p.outcome})</span>
-                            </div>
-
-                            <div>
-                              <span className="text-slate-400 block text-[10px]">Risultato Reale:</span>
-                              <span className="font-mono font-bold text-slate-700">
-                                {isFinished ? `${realHome} - ${realAway}` : 'In Programma'}
-                              </span>
-                            </div>
-                          </div>
-
-                          {p.scorer && (
-                            <div className="text-[11px] text-slate-600 border-t border-slate-200/40 pt-1 flex justify-between">
-                              <span>Marcatori scelti: <strong className="text-slate-800">{p.scorer}</strong></span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-
-                  {allLeaguePredictions.filter((p) => p.nickname === selectedMemberDetail && p.match_id !== 'JOIN_ENTRY').length === 0 && (
-                    <p className="text-xs text-slate-400 p-4 text-center">Nessun pronostico inviato per questa lega.</p>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
-                <h3 className="font-bold text-sm text-slate-800">Membri in {activeLeagueCode} ({leagueMembersList.length})</h3>
-                <p className="text-[11px] text-slate-400">Clicca su un partecipante per consultare lo storico dei suoi pronostici.</p>
-
-                <div className="divide-y divide-slate-100">
-                  {leagueMembersList.map((nick) => (
-                    <div
-                      key={nick}
-                      onClick={() => setSelectedMemberDetail(nick)}
-                      className="py-2.5 flex items-center justify-between text-xs cursor-pointer hover:bg-slate-50 px-2 rounded-lg transition-all"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <User className="w-4 h-4 text-emerald-600" />
-                        <span className="font-semibold text-slate-700">{nick}</span>
-                        {nick === userName && <span className="text-[10px] text-emerald-600 font-bold">(Tu)</span>}
-                      </div>
-                      <div className="flex items-center space-x-1 text-slate-400">
-                        <Eye className="w-3.5 h-3.5" />
-                        <ChevronRight className="w-4 h-4" />
-                      </div>
+            {/* PARTECIPANTI REGISTRATI ALLA LEGA ATTIVA */}
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+              <h3 className="font-bold text-sm text-slate-800">Membri in {activeLeagueCode} ({leagueMembersList.length})</h3>
+              <div className="divide-y divide-slate-100">
+                {leagueMembersList.map((nick) => (
+                  <div key={nick} className="py-2.5 flex items-center justify-between text-xs">
+                    <div className="flex items-center space-x-2">
+                      <User className="w-4 h-4 text-emerald-600" />
+                      <span className="font-semibold text-slate-700">{nick}</span>
+                      {nick === userName && <span className="text-[10px] text-emerald-600 font-bold">(Tu)</span>}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
 
+            {/* INVITI E CONDIVISIONE LEGA */}
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
               <h3 className="font-bold text-sm text-slate-800">Invita Amici in {activeLeagueCode}</h3>
               <div className="bg-slate-50 p-3 rounded-xl text-center font-mono font-extrabold text-emerald-700 text-lg tracking-widest border border-slate-200">
@@ -1423,19 +1509,15 @@ export default function Home() {
                 </button>
               </div>
             </div>
-          </div>
-        )}
 
-        {/* TAB 4: IMPOSTAZIONI */}
-        {activeTab === 'settings' && (
-          <div className="space-y-4">
+            {/* AGGIORNAMENTO ROSE DI CLUB PROTEGGIUTO DA PASSWORD */}
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-4">
               <div className="flex items-center space-x-2 border-b border-slate-100 pb-3">
-                <Database className="w-5 h-5 text-emerald-600" />
-                <h3 className="font-bold text-sm text-slate-800">Gestione Dati Rose</h3>
+                <Shield className="w-5 h-5 text-emerald-600" />
+                <h3 className="font-bold text-sm text-slate-800">Gestione Rose (Area Riservata)</h3>
               </div>
               <p className="text-xs text-slate-500 leading-relaxed">
-                Seleziona una lega alla volta da aggiornare on-demand per i marcatori reali dei club.
+                Aggiorna le rose dei club dal server. Questa operazione richiede la password di amministratore.
               </p>
 
               <div className="space-y-1.5">
@@ -1455,13 +1537,47 @@ export default function Home() {
               </div>
 
               <button
-                onClick={syncSelectedLeagueSquads}
+                onClick={() => setShowPasswordModal(true)}
                 disabled={syncingSquads}
                 className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white font-bold py-3 rounded-xl shadow-md transition-all text-xs flex items-center justify-center space-x-2"
               >
                 <RefreshCw className={`w-4 h-4 ${syncingSquads ? 'animate-spin' : ''}`} />
                 <span>{syncingSquads ? 'Sincronizzazione in corso...' : 'Aggiorna Rose di questa Lega'}</span>
               </button>
+
+              {/* MODALE RICHIESTA PASSWORD (admin) */}
+              {showPasswordModal && (
+                <div className="bg-slate-900 text-white p-4 rounded-2xl space-y-3">
+                  <div className="flex items-center space-x-2 text-amber-400">
+                    <Key className="w-4 h-4" />
+                    <h4 className="font-bold text-xs">Inserisci Password Amministratore</h4>
+                  </div>
+                  <input
+                    type="password"
+                    placeholder="Inserisci password..."
+                    value={adminPasswordInput}
+                    onChange={(e) => setInputAdminPassword(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <div className="flex space-x-2 pt-1">
+                    <button
+                      onClick={handleVerifyAndSyncSquads}
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-xl text-xs transition-all"
+                    >
+                      Conferma
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowPasswordModal(false);
+                        setInputAdminPassword('');
+                      }}
+                      className="bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold px-3 py-2 rounded-xl text-xs transition-all"
+                    >
+                      Annulla
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {syncMessage && (
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs font-medium text-slate-700 space-y-1">
@@ -1485,9 +1601,9 @@ export default function Home() {
           <span className="text-[10px]">Classifica</span>
         </button>
 
-        <button onClick={() => setActiveTab('league')} className={`flex flex-col items-center space-y-1 ${activeTab === 'league' ? 'text-emerald-600 font-bold' : 'text-slate-400'}`}>
-          <Users className="w-5 h-5" />
-          <span className="text-[10px]">Lega</span>
+        <button onClick={() => setActiveTab('predictions_history')} className={`flex flex-col items-center space-y-1 ${activeTab === 'predictions_history' ? 'text-emerald-600 font-bold' : 'text-slate-400'}`}>
+          <History className="w-5 h-5" />
+          <span className="text-[10px]">Pronostici</span>
         </button>
 
         <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center space-y-1 ${activeTab === 'settings' ? 'text-emerald-600 font-bold' : 'text-slate-400'}`}>
