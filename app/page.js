@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Trophy, Calendar, Users, RefreshCw, Settings, Database, Share2, Copy, Check, UserCheck, LogOut, User, AlertCircle, CheckCircle, Save, Play, ChevronRight, ChevronDown, Eye, PlusCircle, Layers, Lock, History, Target, Edit3, Key, Shield, Award, Star, LogIn } from 'lucide-react';
+import { Trophy, Calendar, Users, RefreshCw, Settings, Database, Share2, Copy, Check, UserCheck, LogOut, User, AlertCircle, CheckCircle, Save, Play, ChevronRight, ChevronDown, Eye, PlusCircle, Layers, Lock, History, Target, Edit3, Key, Shield, Award, Star, Zap } from 'lucide-react';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('matches');
@@ -67,13 +67,13 @@ export default function Home() {
     { id: 'EL', name: 'Europa League', country: '🇪🇺' },
   ];
 
-  // PARTITE NATIONS LEAGUE DI OGGI (Slovenia-Scozia rimossa per il test)
+  // PARTITE NATIONS LEAGUE DI OGGI (Slovenia-Scozia rimossa)
   const nationsLeagueMatches = [
     {
       id: 'unl-2026-02',
       homeTeam: { name: 'Fær Øer', shortName: 'Fær Øer', id: 'FRO' },
       awayTeam: { name: 'Kazakistan', shortName: 'Kazakistan', id: 'KAZ' },
-      utcDate: '2026-09-26T16:00:00Z', // 18:00 CEST
+      utcDate: '2026-09-26T16:00:00Z',
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -82,7 +82,7 @@ export default function Home() {
       id: 'unl-2026-03',
       homeTeam: { name: 'San Marino', shortName: 'San Marino', id: 'SMR' },
       awayTeam: { name: 'Finlandia', shortName: 'Finlandia', id: 'FIN' },
-      utcDate: '2026-09-26T16:00:00Z', // 18:00 CEST
+      utcDate: '2026-09-26T16:00:00Z',
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -91,7 +91,7 @@ export default function Home() {
       id: 'unl-2026-04',
       homeTeam: { name: 'Islanda', shortName: 'Islanda', id: 'ISL' },
       awayTeam: { name: 'Estonia', shortName: 'Estonia', id: 'EST' },
-      utcDate: '2026-09-26T16:00:00Z', // 18:00 CEST
+      utcDate: '2026-09-26T16:00:00Z',
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -100,7 +100,7 @@ export default function Home() {
       id: 'unl-2026-05',
       homeTeam: { name: 'Bulgaria', shortName: 'Bulgaria', id: 'BUL' },
       awayTeam: { name: 'Lussemburgo', shortName: 'Lussemburgo', id: 'LUX' },
-      utcDate: '2026-09-26T16:00:00Z', // 18:00 CEST
+      utcDate: '2026-09-26T16:00:00Z',
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -109,7 +109,7 @@ export default function Home() {
       id: 'unl-2026-06',
       homeTeam: { name: 'Repubblica Ceca', shortName: 'Rep. Ceca', id: 'CZE' },
       awayTeam: { name: 'Croazia', shortName: 'Croazia', id: 'CRO' },
-      utcDate: '2026-09-26T18:45:00Z', // 20:45 CEST
+      utcDate: '2026-09-26T18:45:00Z',
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -118,7 +118,7 @@ export default function Home() {
       id: 'unl-2026-07',
       homeTeam: { name: 'Macedonia del Nord', shortName: 'Macedonia N.', id: 'MKD' },
       awayTeam: { name: 'Svizzera', shortName: 'Svizzera', id: 'SUI' },
-      utcDate: '2026-09-26T18:45:00Z', // 20:45 CEST
+      utcDate: '2026-09-26T18:45:00Z',
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -127,7 +127,7 @@ export default function Home() {
       id: 'unl-2026-08',
       homeTeam: { name: 'Inghilterra', shortName: 'Inghilterra', id: 'ENG' },
       awayTeam: { name: 'Spagna', shortName: 'Spagna', id: 'ESP' },
-      utcDate: '2026-09-26T18:45:00Z', // 20:45 CEST
+      utcDate: '2026-09-26T18:45:00Z',
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -136,7 +136,7 @@ export default function Home() {
       id: 'unl-2026-09',
       homeTeam: { name: 'Slovacchia', shortName: 'Slovacchia', id: 'SVK' },
       awayTeam: { name: 'Moldavia', shortName: 'Moldavia', id: 'MDA' },
-      utcDate: '2026-09-26T18:45:00Z', // 20:45 CEST
+      utcDate: '2026-09-26T18:45:00Z',
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -145,7 +145,7 @@ export default function Home() {
       id: 'unl-2026-10',
       homeTeam: { name: 'Albania', shortName: 'Albania', id: 'ALB' },
       awayTeam: { name: 'Bielorussia', shortName: 'Bielorussia', id: 'BLR' },
-      utcDate: '2026-09-26T18:45:00Z', // 20:45 CEST
+      utcDate: '2026-09-26T18:45:00Z',
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -261,7 +261,7 @@ export default function Home() {
     }
   }, [userName, activeLeagueCode, matches]);
 
-  // AUTENTICAZIONE: REGISTRAZIONE E LOGIN GLOBALE
+  // AUTENTICAZIONE
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     if (!authUsernameInput.trim() || !authPasswordInput.trim()) return;
@@ -285,7 +285,6 @@ export default function Home() {
         const result = await res.json();
 
         if (res.ok && result.success) {
-          // Iscrivi l'utente alla prima lega
           await fetch('/api/predictions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -300,7 +299,6 @@ export default function Home() {
           setDbStatus({ type: 'error', text: result.error || 'Errore registrazione.' });
         }
       } else {
-        // LOGIN
         const res = await fetch('/api/predictions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -325,7 +323,7 @@ export default function Home() {
     }
   };
 
-  // UNIRSI A UNA NUOVA LEGA
+  // UNIRSI A NUOVA LEGA
   const handleAddNewLeague = async (e) => {
     e.preventDefault();
     if (!inputNewCode.trim()) return;
@@ -359,7 +357,6 @@ export default function Home() {
     }
   };
 
-  // SELEZIONA LEGA ATTIVA
   const handleSelectActiveLeague = (code) => {
     setActiveLeagueCode(code);
     setExpandedLeague(code);
@@ -367,7 +364,6 @@ export default function Home() {
     setDbStatus({ type: 'success', text: `Passato alla lega ${code}` });
   };
 
-  // LOGOUT GLOBALE
   const handleLogout = () => {
     if (confirm('Vuoi uscire dal tuo account su questo dispositivo?')) {
       localStorage.clear();
@@ -379,7 +375,6 @@ export default function Home() {
     }
   };
 
-  // VERIFICA SE LA GIORNATA È GIÀ INIZIATA O PASSATA
   const isMatchdayStartedOrFinished = () => {
     if (!matches || matches.length === 0) return false;
     const now = new Date();
@@ -399,7 +394,6 @@ export default function Home() {
     return matches.some((m) => !!userPredictions[m.id]);
   };
 
-  // INIZIALIZZA/MODIFICA PRONOSTICI PER LA GIORNATA
   const handleStartPredictionsForMatchday = () => {
     if (isMatchdayStartedOrFinished()) {
       setDbStatus({ type: 'error', text: 'Impossibile pronosticare: la prima partita di questa giornata è già iniziata!' });
@@ -426,7 +420,6 @@ export default function Home() {
     setDbStatus({ type: 'success', text: 'Modalità modifica attivata! Aggiorna i punteggi e premi "Salva Tutti i Pronostici".' });
   };
 
-  // SALVA TUTTI I PRONOSTICI DELLA LEGA CORRENTE
   const handleSaveAllPredictions = async () => {
     if (isMatchdayStartedOrFinished()) {
       setDbStatus({ type: 'error', text: 'Tempo scaduto! La giornata è già iniziata e non è più possibile salvare i pronostici.' });
@@ -483,7 +476,6 @@ export default function Home() {
     }
   };
 
-  // SINCRONIZZAZIONE ROSE DI CLUB PROTEGGIUTA DA PASSWORD ("admin")
   const handleVerifyAndSyncSquads = () => {
     if (adminPasswordInput.trim() === 'admin') {
       setShowPasswordModal(false);
@@ -541,7 +533,6 @@ export default function Home() {
     }
   };
 
-  // Condivisione
   const handleCopyLink = () => {
     const inviteUrl = `${window.location.origin}/?code=${activeLeagueCode || 'LEGA-8492'}`;
     navigator.clipboard.writeText(inviteUrl);
@@ -557,7 +548,6 @@ export default function Home() {
     window.open(`https://wa.me/?text=${message}`, '_blank');
   };
 
-  // CARICA PARTITE
   const fetchMatches = async (forcedMatchday = null) => {
     setLoading(true);
     setIsEditingPredictions(false);
@@ -618,7 +608,6 @@ export default function Home() {
     fetchMatches(null);
   }, [selectedLeague]);
 
-  // FUNZIONE UTILS: Trova la partita per un dato ID
   const findMatchDetailsById = (matchId) => {
     const foundInCurrent = matches.find((m) => String(m.id) === String(matchId));
     if (foundInCurrent) return foundInCurrent;
@@ -629,10 +618,8 @@ export default function Home() {
     return null;
   };
 
-  // Partecipanti Unici della Lega Attiva
   const leagueMembersList = Array.from(new Set(allLeaguePredictions.map(p => p.nickname)));
 
-  // CALCOLO PUNTI E RISULTATO DI UN SINGOLO PRONOSTICO
   const evaluateSinglePrediction = (pred, match) => {
     if (!match || match.status !== 'FINISHED') {
       return { status: 'PENDING', pts: 0, text: 'In Corso / In Programma', colorBg: 'bg-slate-100', colorText: 'text-slate-600' };
@@ -684,7 +671,6 @@ export default function Home() {
     }
   };
 
-  // CALCOLO CLASSIFICA STANDARD
   const calculateGroupLeaderboard = () => {
     const userScores = {};
 
@@ -711,7 +697,7 @@ export default function Home() {
     return Object.values(userScores).sort((a, b) => b.matchdayPts - a.matchdayPts);
   };
 
-  // CALCOLO CLASSIFICA OBIETTIVI
+  // CALCOLO OBIETTIVI COMPLETI (SINGOLI E CUMULATIVI)
   const calculateAchievementsForUsers = () => {
     const userAchievements = {};
 
@@ -722,9 +708,14 @@ export default function Home() {
         totalExacts: 0,
         totalOutcomes: 0,
         totalScorers: 0,
+        dayExacts: 0,
+        dayScorers: 0,
         unlockedBadges: []
       };
     });
+
+    // Mappa per contare marcatori/esatti per singola giornata
+    const dayStats = {};
 
     allLeaguePredictions.forEach((pred) => {
       if (pred.match_id === 'JOIN_ENTRY') return;
@@ -736,6 +727,8 @@ export default function Home() {
           totalExacts: 0,
           totalOutcomes: 0,
           totalScorers: 0,
+          dayExacts: 0,
+          dayScorers: 0,
           unlockedBadges: []
         };
       }
@@ -745,8 +738,11 @@ export default function Home() {
 
       const evalResult = evaluateSinglePrediction(pred, match);
 
+      if (!dayStats[pred.nickname]) dayStats[pred.nickname] = { exacts: 0, scorers: 0 };
+
       if (evalResult.status === 'EXACT') {
         userAchievements[pred.nickname].totalExacts += 1;
+        dayStats[pred.nickname].exacts += 1;
       } else if (evalResult.status === 'OUTCOME') {
         userAchievements[pred.nickname].totalOutcomes += 1;
       }
@@ -759,6 +755,7 @@ export default function Home() {
           );
           if (hasScored) {
             userAchievements[pred.nickname].totalScorers += 1;
+            dayStats[pred.nickname].scorers += 1;
           }
         });
       }
@@ -768,26 +765,45 @@ export default function Home() {
       let pts = 0;
       const badges = [];
 
+      // 1. Bomber della Giornata (+50 PT se 3 marcatori in 1 giornata)
+      const userDayScorers = dayStats[u.name]?.scorers || 0;
+      if (userDayScorers >= 3) {
+        pts += 50;
+        badges.push(`🎯 Bomber Giornata (${userDayScorers} Marcatori) [+50pt]`);
+      }
+
+      // 2. Club dei 10 Marcatori (+100 PT ogni 10 marcatori)
       const scorerBlocks = Math.floor(u.totalScorers / 10);
       if (scorerBlocks > 0) {
         pts += scorerBlocks * 100;
-        badges.push(`⚽ Cecchino (${u.totalScorers} Marcatori) [+${scorerBlocks * 100}pt]`);
+        badges.push(`⚽ Club 10 Marcatori (${u.totalScorers}) [+${scorerBlocks * 100}pt]`);
       }
 
+      // 3. Mago del Risultato (+100 PT se 3 esatti in 1 giornata)
+      const userDayExacts = dayStats[u.name]?.exacts || 0;
+      if (userDayExacts >= 3) {
+        pts += 100;
+        badges.push(`🔮 Mago del Risultato (${userDayExacts} Esatti) [+100pt]`);
+      }
+
+      // 4. Collezionista Esatti (+150 PT ogni 10 esatti totali)
       const exactBlocks = Math.floor(u.totalExacts / 10);
       if (exactBlocks > 0) {
         pts += exactBlocks * 150;
-        badges.push(`🎯 Mago Esatti (${u.totalExacts} Esatti) [+${exactBlocks * 150}pt]`);
+        badges.push(`🎯 Collezionista Esatti (${u.totalExacts}) [+${exactBlocks * 150}pt]`);
       }
 
+      // 5. Poker d'Esiti (+30 PT ogni 10 esiti indovinati)
       const outcomeBlocks = Math.floor(u.totalOutcomes / 10);
       if (outcomeBlocks > 0) {
         pts += outcomeBlocks * 30;
-        badges.push(`👑 Pronosticatore (${u.totalOutcomes} Esiti) [+${outcomeBlocks * 30}pt]`);
+        badges.push(`👑 Poker d'Esiti (${u.totalOutcomes}) [+${outcomeBlocks * 30}pt]`);
       }
 
       u.totalAchievementPts = pts;
       u.unlockedBadges = badges;
+      u.dayExacts = userDayExacts;
+      u.dayScorers = userDayScorers;
     });
 
     return Object.values(userAchievements).sort((a, b) => b.totalAchievementPts - a.totalAchievementPts);
@@ -806,7 +822,6 @@ export default function Home() {
     return 'X';
   };
 
-  // Gestione Risultati
   const handleScoreChange = (matchId, team, value) => {
     if (!isEditingPredictions) return;
     const currentPred = userPredictions[matchId] || { homeScore: '0', awayScore: '0', homeScorers: [], awayScorers: [] };
@@ -885,7 +900,6 @@ export default function Home() {
             </p>
           </div>
 
-          {/* SOTTO-TAB LOGIN / REGISTRATI */}
           <div className="bg-slate-100 p-1 rounded-xl grid grid-cols-2 gap-1 text-center text-xs font-bold">
             <button
               onClick={() => setAuthMode('login')}
@@ -999,7 +1013,7 @@ export default function Home() {
           dbStatus.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-700'
         }`}>
           <div className="flex items-center space-x-2">
-            {dbStatus.type === 'success' ? <CheckCircle className="w-4 h-4 text-emerald-600" /> : <AlertCircle className="w-4 h-4 text-red-600" />}
+            {dbStatus.type === 'success' ? <CheckCircle className="w-5 h-5 text-emerald-600" /> : <AlertCircle className="w-5 h-5 text-red-600" />}
             <span className="break-words">{dbStatus.text}</span>
           </div>
           <button onClick={() => setDbStatus(null)} className="text-slate-400 hover:text-slate-600 ml-2">✕</button>
@@ -1052,7 +1066,6 @@ export default function Home() {
                   </>
                 )}
 
-                {/* DINAMICA PULSANTE PRONOSTICA / MODIFICA / BLOCCATO */}
                 {matchdayStarted ? (
                   <div className="bg-slate-100 text-slate-500 border border-slate-200 px-2.5 py-1.5 rounded-lg text-[11px] font-bold flex items-center space-x-1 cursor-not-allowed">
                     <Lock className="w-3 h-3 text-slate-400" />
@@ -1145,7 +1158,6 @@ export default function Home() {
                     </div>
 
                     <div className="bg-slate-50 p-3 rounded-xl space-y-3 border border-slate-200/80">
-                      {/* RISULTATO ESATTO */}
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-slate-600 font-semibold">Risultato Esatto:</span>
                         <div className="flex items-center space-x-2">
@@ -1171,7 +1183,6 @@ export default function Home() {
                         </div>
                       </div>
 
-                      {/* ESITO CALCOLATO */}
                       <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
                         <span className="text-xs text-slate-500 font-medium">Esito (Calcolato):</span>
                         <div className="grid grid-cols-3 gap-1.5 w-36">
@@ -1190,7 +1201,6 @@ export default function Home() {
                         </div>
                       </div>
 
-                      {/* SELEZIONE MARCATORI DINAMICA */}
                       <div className="pt-2 border-t border-slate-200/60 space-y-2">
                         <div className="flex justify-between items-center text-xs font-semibold text-slate-700">
                           <span className="flex items-center space-x-1">
@@ -1199,7 +1209,6 @@ export default function Home() {
                           </span>
                         </div>
 
-                        {/* SEZIONE MARCATORI CASA (SFONDO CELESTE) */}
                         <div className="bg-sky-50/70 border border-sky-200 p-2.5 rounded-xl space-y-1.5">
                           <div className="flex justify-between items-center text-[11px] font-bold text-sky-900">
                             <span>{homeName} (Casa)</span>
@@ -1237,7 +1246,6 @@ export default function Home() {
                           )}
                         </div>
 
-                        {/* SEZIONE MARCATORI TRASFERTA (SFONDO OCRA/AMBRA) */}
                         <div className="bg-amber-50/70 border border-amber-200 p-2.5 rounded-xl space-y-1.5">
                           <div className="flex justify-between items-center text-[11px] font-bold text-amber-900">
                             <span>{awayName} (Trasferta)</span>
@@ -1307,7 +1315,6 @@ export default function Home() {
         {/* TAB 2: CLASSIFICA E OBIETTIVI SBLOCCATI */}
         {activeTab === 'standings' && (
           <div className="space-y-4">
-            {/* SELETTORE LEGA PER CLASSIFICA */}
             <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-200 space-y-2">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Seleziona Lega per Classifica:</span>
               <div className="flex space-x-2 overflow-x-auto">
@@ -1327,7 +1334,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* SOTTO-TAB CLASSIFICA STANDARD / OBIETTIVI / BADGE */}
             <div className="bg-slate-200/80 p-1 rounded-xl grid grid-cols-3 gap-1 text-center">
               <button
                 onClick={() => setStandingsSubTab('standard')}
@@ -1394,55 +1400,114 @@ export default function Home() {
               </div>
             )}
 
-            {/* 2. CLASSIFICA OBIETTIVI PARALLELA */}
+            {/* 2. CLASSIFICA OBIETTIVI + TABELLA REGOLAMENTO COMPLETO */}
             {standingsSubTab === 'achievements' && (
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden space-y-1">
-                <div className="bg-amber-50 p-3 border-b border-amber-200 font-bold text-xs text-amber-900 flex justify-between items-center">
-                  <span className="flex items-center space-x-1.5">
-                    <Award className="w-4 h-4 text-amber-600" />
-                    <span>Classifica Obiettivi ({activeLeagueCode})</span>
-                  </span>
-                  <span className="text-xs text-amber-700">Punti Achievement</span>
+              <div className="space-y-4">
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden space-y-1">
+                  <div className="bg-amber-50 p-3 border-b border-amber-200 font-bold text-xs text-amber-900 flex justify-between items-center">
+                    <span className="flex items-center space-x-1.5">
+                      <Award className="w-4 h-4 text-amber-600" />
+                      <span>Classifica Obiettivi ({activeLeagueCode})</span>
+                    </span>
+                    <span className="text-xs text-amber-700">Punti Achievement</span>
+                  </div>
+
+                  {achievementsLeaderboard.map((user, idx) => (
+                    <div
+                      key={user.name}
+                      className={`p-3.5 border-b border-slate-100 space-y-2 ${
+                        user.name === userName ? 'bg-amber-50/40' : ''
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <span className={`w-6 text-center font-extrabold text-xs rounded-full py-1 ${idx === 0 ? 'bg-amber-400 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                            {idx + 1}
+                          </span>
+                          <span className="font-bold text-sm text-slate-800">
+                            {user.name} {user.name === userName ? '(Tu)' : ''}
+                          </span>
+                        </div>
+                        <span className="font-extrabold text-amber-600 text-base font-mono">
+                          +{user.totalAchievementPts} PT
+                        </span>
+                      </div>
+
+                      {user.unlockedBadges.length > 0 ? (
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {user.unlockedBadges.map((badge, bIdx) => (
+                            <span key={bIdx} className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md text-[10px] font-semibold border border-slate-200">
+                              {badge}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[10px] text-slate-400 italic">Nessun obiettivo ancora sbloccato.</p>
+                      )}
+                    </div>
+                  ))}
                 </div>
 
-                {achievementsLeaderboard.map((user, idx) => (
-                  <div
-                    key={user.name}
-                    className={`p-3.5 border-b border-slate-100 space-y-2 ${
-                      user.name === userName ? 'bg-amber-50/40' : ''
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <span className={`w-6 text-center font-extrabold text-xs rounded-full py-1 ${idx === 0 ? 'bg-amber-400 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                          {idx + 1}
-                        </span>
-                        <span className="font-bold text-sm text-slate-800">
-                          {user.name} {user.name === userName ? '(Tu)' : ''}
-                        </span>
+                {/* TABELLA GUIDA OBIETTIVI E REQUISITI */}
+                <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+                  <h4 className="font-bold text-xs text-slate-800 flex items-center space-x-1.5">
+                    <Star className="w-4 h-4 text-amber-500" />
+                    <span>Guida Obiettivi e Punteggi</span>
+                  </h4>
+                  <div className="divide-y divide-slate-100 text-[11px]">
+                    <div className="py-2 flex justify-between items-center">
+                      <div>
+                        <strong className="text-slate-800 block">🎯 Bomber della Giornata</strong>
+                        <span className="text-slate-400">3 Marcatori indovinati in 1 singola giornata</span>
                       </div>
-                      <span className="font-extrabold text-amber-600 text-base font-mono">
-                        +{user.totalAchievementPts} PT
-                      </span>
+                      <span className="font-bold text-emerald-700 font-mono">+50 PT</span>
                     </div>
 
-                    {user.unlockedBadges.length > 0 ? (
-                      <div className="flex flex-wrap gap-1 pt-1">
-                        {user.unlockedBadges.map((badge, bIdx) => (
-                          <span key={bIdx} className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md text-[10px] font-semibold border border-slate-200">
-                            {badge}
-                          </span>
-                        ))}
+                    <div className="py-2 flex justify-between items-center">
+                      <div>
+                        <strong className="text-slate-800 block">⚽ Club dei 10 Marcatori</strong>
+                        <span className="text-slate-400">Ogni 10 Marcatori totali indovinati nella lega</span>
                       </div>
-                    ) : (
-                      <p className="text-[10px] text-slate-400 italic">Nessun obiettivo ancora sbloccato.</p>
-                    )}
+                      <span className="font-bold text-emerald-700 font-mono">+100 PT</span>
+                    </div>
+
+                    <div className="py-2 flex justify-between items-center">
+                      <div>
+                        <strong className="text-slate-800 block">🔮 Mago del Risultato</strong>
+                        <span className="text-slate-400">3 Risultati Esatti in 1 singola giornata</span>
+                      </div>
+                      <span className="font-bold text-emerald-700 font-mono">+100 PT</span>
+                    </div>
+
+                    <div className="py-2 flex justify-between items-center">
+                      <div>
+                        <strong className="text-slate-800 block">🎯 Collezionista Esatti</strong>
+                        <span className="text-slate-400">Ogni 10 Risultati Esatti totali indovinati</span>
+                      </div>
+                      <span className="font-bold text-emerald-700 font-mono">+150 PT</span>
+                    </div>
+
+                    <div className="py-2 flex justify-between items-center">
+                      <div>
+                        <strong className="text-slate-800 block">👑 Poker d'Esiti</strong>
+                        <span className="text-slate-400">Ogni 10 Esiti (1, X, 2) indovinati totali</span>
+                      </div>
+                      <span className="font-bold text-emerald-700 font-mono">+30 PT</span>
+                    </div>
+
+                    <div className="py-2 flex justify-between items-center">
+                      <div>
+                        <strong className="text-slate-800 block">⚡ En Plein Giornata</strong>
+                        <span className="text-slate-400">100% degli Esiti indovinati in 1 giornata</span>
+                      </div>
+                      <span className="font-bold text-emerald-700 font-mono">+200 PT</span>
+                    </div>
                   </div>
-                ))}
+                </div>
               </div>
             )}
 
-            {/* 3. LISTA BADGE E PROGRESSO OBIETTIVI */}
+            {/* 3. LISTA COMPLETA BADGE E PROGRESSO OBIETTIVI UTENTE */}
             {standingsSubTab === 'badges' && (
               <div className="space-y-3">
                 <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-2">
@@ -1451,17 +1516,34 @@ export default function Home() {
                     <span>Progresso Tuoi Obiettivi ({userName})</span>
                   </h3>
                   <p className="text-[11px] text-slate-400">
-                    Ogni soglia raggiunta aggiunge punti alla tua classifica parallela!
+                    Sblocca i traguardi per scalare la classifica parallela!
                   </p>
                 </div>
 
                 {achievementsLeaderboard.filter(u => u.name === userName).map((u) => (
                   <div key={u.name} className="space-y-2">
-                    {/* SOGLIA MARCATORI */}
-                    <div className="bg-white p-3.5 rounded-2xl border border-slate-200 space-y-2">
+                    {/* OBIETTIVO 1: BOMBER DELLA GIORNATA */}
+                    <div className="bg-white p-3.5 rounded-2xl border border-slate-200 space-y-1.5">
                       <div className="flex justify-between items-center text-xs font-bold">
                         <span className="flex items-center space-x-1.5 text-sky-900">
-                          <span>⚽ Cecchino dei Marcatori</span>
+                          <span>🎯 Bomber della Giornata</span>
+                        </span>
+                        <span className="text-emerald-700 font-mono">{u.dayScorers} / 3 marcatori</span>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div
+                          className="bg-sky-500 h-full transition-all"
+                          style={{ width: `${Math.min(100, (u.dayScorers / 3) * 100)}%` }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-slate-400">+50 PT se indovini 3 marcatori in 1 singola giornata.</p>
+                    </div>
+
+                    {/* OBIETTIVO 2: CLUB DEI 10 MARCATORI */}
+                    <div className="bg-white p-3.5 rounded-2xl border border-slate-200 space-y-1.5">
+                      <div className="flex justify-between items-center text-xs font-bold">
+                        <span className="flex items-center space-x-1.5 text-sky-900">
+                          <span>⚽ Club dei 10 Marcatori</span>
                         </span>
                         <span className="text-emerald-700 font-mono">{u.totalScorers} / {Math.ceil((u.totalScorers + 1) / 10) * 10}</span>
                       </div>
@@ -1474,11 +1556,28 @@ export default function Home() {
                       <p className="text-[10px] text-slate-400">+100 PT per ogni 10 marcatori totali indovinati.</p>
                     </div>
 
-                    {/* SOGLIA ESATTI */}
-                    <div className="bg-white p-3.5 rounded-2xl border border-slate-200 space-y-2">
+                    {/* OBIETTIVO 3: MAGO DEL RISULTATO */}
+                    <div className="bg-white p-3.5 rounded-2xl border border-slate-200 space-y-1.5">
                       <div className="flex justify-between items-center text-xs font-bold">
                         <span className="flex items-center space-x-1.5 text-emerald-900">
-                          <span>🎯 Mago dei Risultati Esatti</span>
+                          <span>🔮 Mago del Risultato</span>
+                        </span>
+                        <span className="text-emerald-700 font-mono">{u.dayExacts} / 3 esatti</span>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div
+                          className="bg-emerald-500 h-full transition-all"
+                          style={{ width: `${Math.min(100, (u.dayExacts / 3) * 100)}%` }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-slate-400">+100 PT se indovini 3 risultati esatti in 1 singola giornata.</p>
+                    </div>
+
+                    {/* OBIETTIVO 4: COLLEZIONISTA ESATTI */}
+                    <div className="bg-white p-3.5 rounded-2xl border border-slate-200 space-y-1.5">
+                      <div className="flex justify-between items-center text-xs font-bold">
+                        <span className="flex items-center space-x-1.5 text-emerald-900">
+                          <span>🎯 Collezionista Esatti</span>
                         </span>
                         <span className="text-emerald-700 font-mono">{u.totalExacts} / {Math.ceil((u.totalExacts + 1) / 10) * 10}</span>
                       </div>
@@ -1491,11 +1590,11 @@ export default function Home() {
                       <p className="text-[10px] text-slate-400">+150 PT per ogni 10 risultati esatti totali indovinati.</p>
                     </div>
 
-                    {/* SOGLIA ESITI */}
-                    <div className="bg-white p-3.5 rounded-2xl border border-slate-200 space-y-2">
+                    {/* OBIETTIVO 5: POKER D'ESITI */}
+                    <div className="bg-white p-3.5 rounded-2xl border border-slate-200 space-y-1.5">
                       <div className="flex justify-between items-center text-xs font-bold">
                         <span className="flex items-center space-x-1.5 text-amber-900">
-                          <span>👑 Collezionista di Esiti (1X2)</span>
+                          <span>👑 Poker d'Esiti (1X2)</span>
                         </span>
                         <span className="text-amber-700 font-mono">{u.totalOutcomes} / {Math.ceil((u.totalOutcomes + 1) / 10) * 10}</span>
                       </div>
@@ -1506,6 +1605,20 @@ export default function Home() {
                         />
                       </div>
                       <p className="text-[10px] text-slate-400">+30 PT per ogni 10 esiti totali indovinati.</p>
+                    </div>
+
+                    {/* OBIETTIVO 6: EN PLEIN GIORNATA */}
+                    <div className="bg-white p-3.5 rounded-2xl border border-slate-200 space-y-1.5">
+                      <div className="flex justify-between items-center text-xs font-bold">
+                        <span className="flex items-center space-x-1.5 text-purple-900">
+                          <span>⚡ En Plein Giornata</span>
+                        </span>
+                        <span className="text-purple-700 font-mono">100% Esiti</span>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div className="bg-purple-500 h-full w-0 transition-all" />
+                      </div>
+                      <p className="text-[10px] text-slate-400">+200 PT se indovini tutti gli esiti della giornata.</p>
                     </div>
                   </div>
                 ))}
@@ -1534,7 +1647,6 @@ export default function Home() {
 
                 return (
                   <div key={code} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-                    {/* INTESTAZIONE LEGA (ESPLODIBILE) */}
                     <button
                       onClick={() => setExpandedLeague(isLeagueExpanded ? null : code)}
                       className="w-full p-4 bg-slate-50 flex items-center justify-between font-bold text-xs text-slate-800 hover:bg-slate-100 transition-all border-b border-slate-200"
@@ -1546,7 +1658,6 @@ export default function Home() {
                       {isLeagueExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
                     </button>
 
-                    {/* CONTENUTO LEGA: LISTA UTENTI */}
                     {isLeagueExpanded && (
                       <div className="p-3 space-y-3 bg-white">
                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1">Membri Iscritti:</p>
@@ -1556,7 +1667,6 @@ export default function Home() {
 
                           return (
                             <div key={nick} className="border border-slate-200/80 rounded-xl overflow-hidden">
-                              {/* INTESTAZIONE UTENTE (ESPLODIBILE) */}
                               <button
                                 onClick={() => setExpandedLeagueUser(isUserExpanded ? null : nick)}
                                 className="w-full p-3 bg-slate-50/60 flex items-center justify-between text-xs font-semibold text-slate-700 hover:bg-slate-100/80 transition-all"
@@ -1568,10 +1678,8 @@ export default function Home() {
                                 {isUserExpanded ? <ChevronDown className="w-4 h-4 text-slate-600" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
                               </button>
 
-                              {/* CONTENUTO UTENTE: SELEZIONE CAMPIONATO E SCHEDINA */}
                               {isUserExpanded && (
                                 <div className="p-3 bg-slate-50/30 space-y-3 border-t border-slate-200/60">
-                                  {/* FILTRO SELEZIONE CAMPIONATI */}
                                   <div className="flex space-x-1 overflow-x-auto pb-1">
                                     {leagues.map((champ) => (
                                       <button
@@ -1588,7 +1696,6 @@ export default function Home() {
                                     ))}
                                   </div>
 
-                                  {/* LISTA PRONOSTICI DELL'UTENTE PER IL CAMPIONATO SELEZIONATO */}
                                   <div className="space-y-2 pt-1">
                                     {allLeaguePredictions
                                       .filter((p) => p.nickname === nick && p.match_id !== 'JOIN_ENTRY')
@@ -1664,7 +1771,6 @@ export default function Home() {
         {/* TAB 4: IMPOSTAZIONI (UTENTE, AGGIUNTA LEGHE, INVITI E PROTEZIONE ROSE) */}
         {activeTab === 'settings' && (
           <div className="space-y-4">
-            {/* PROFILO UTENTE FISSO E SELETTORE LEGHE */}
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div className="flex items-center space-x-3">
@@ -1685,7 +1791,6 @@ export default function Home() {
                 </button>
               </div>
 
-              {/* LISTA E SELEZIONE DELLE LEGHE ISCRITTE */}
               <div className="space-y-2 pt-1">
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-bold text-slate-700 flex items-center space-x-1">
@@ -1720,7 +1825,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* MODALE PER AGGIUNGERE NUOVA LEGA */}
             {showAddLeagueModal && (
               <div className="bg-emerald-50/90 border border-emerald-200 p-4 rounded-2xl space-y-3">
                 <h4 className="font-bold text-xs text-emerald-900">Unisciti o Crea una Nuova Lega</h4>
@@ -1744,7 +1848,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* PARTECIPANTI REGISTRATI ALLA LEGA ATTIVA */}
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
               <h3 className="font-bold text-sm text-slate-800">Membri in {activeLeagueCode} ({leagueMembersList.length})</h3>
               <div className="divide-y divide-slate-100">
@@ -1760,7 +1863,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* INVITI E CONDIVISIONE LEGA */}
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
               <h3 className="font-bold text-sm text-slate-800">Invita Amici in {activeLeagueCode}</h3>
               <div className="bg-slate-50 p-3 rounded-xl text-center font-mono font-extrabold text-emerald-700 text-lg tracking-widest border border-slate-200">
@@ -1786,7 +1888,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* AGGIORNAMENTO ROSE DI CLUB PROTEGGIUTO DA PASSWORD */}
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-4">
               <div className="flex items-center space-x-2 border-b border-slate-100 pb-3">
                 <Shield className="w-5 h-5 text-emerald-600" />
@@ -1821,7 +1922,6 @@ export default function Home() {
                 <span>{syncingSquads ? 'Sincronizzazione in corso...' : 'Aggiorna Rose di questa Lega'}</span>
               </button>
 
-              {/* MODALE RICHIESTA PASSWORD (admin) */}
               {showPasswordModal && (
                 <div className="bg-slate-900 text-white p-4 rounded-2xl space-y-3">
                   <div className="flex items-center space-x-2 text-amber-400">
