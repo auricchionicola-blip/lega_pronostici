@@ -53,13 +53,13 @@ export default function Home() {
     { id: 'EL', name: 'Europa League', country: '🇪🇺' },
   ];
 
-  // NUOVE PARTITE NATIONS LEAGUE DI OGGI
+  // PARTITE NATIONS LEAGUE DI OGGI
   const nationsLeagueMatches = [
     {
       id: 'unl-2026-01',
       homeTeam: { name: 'Slovenia', shortName: 'Slovenia', id: 'SVN' },
       awayTeam: { name: 'Scozia', shortName: 'Scozia', id: 'SCO' },
-      utcDate: '2026-09-26T13:00:00Z', // 15:00 CEST
+      utcDate: '2026-09-26T13:00:00Z',
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -68,7 +68,7 @@ export default function Home() {
       id: 'unl-2026-02',
       homeTeam: { name: 'Fær Øer', shortName: 'Fær Øer', id: 'FRO' },
       awayTeam: { name: 'Kazakistan', shortName: 'Kazakistan', id: 'KAZ' },
-      utcDate: '2026-09-26T16:00:00Z', // 18:00 CEST
+      utcDate: '2026-09-26T16:00:00Z',
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -77,7 +77,7 @@ export default function Home() {
       id: 'unl-2026-03',
       homeTeam: { name: 'San Marino', shortName: 'San Marino', id: 'SMR' },
       awayTeam: { name: 'Finlandia', shortName: 'Finlandia', id: 'FIN' },
-      utcDate: '2026-09-26T16:00:00Z', // 18:00 CEST
+      utcDate: '2026-09-26T16:00:00Z',
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -86,7 +86,7 @@ export default function Home() {
       id: 'unl-2026-04',
       homeTeam: { name: 'Islanda', shortName: 'Islanda', id: 'ISL' },
       awayTeam: { name: 'Estonia', shortName: 'Estonia', id: 'EST' },
-      utcDate: '2026-09-26T16:00:00Z', // 18:00 CEST
+      utcDate: '2026-09-26T16:00:00Z',
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -95,7 +95,7 @@ export default function Home() {
       id: 'unl-2026-05',
       homeTeam: { name: 'Bulgaria', shortName: 'Bulgaria', id: 'BUL' },
       awayTeam: { name: 'Lussemburgo', shortName: 'Lussemburgo', id: 'LUX' },
-      utcDate: '2026-09-26T16:00:00Z', // 18:00 CEST
+      utcDate: '2026-09-26T16:00:00Z',
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -104,7 +104,7 @@ export default function Home() {
       id: 'unl-2026-06',
       homeTeam: { name: 'Repubblica Ceca', shortName: 'Rep. Ceca', id: 'CZE' },
       awayTeam: { name: 'Croazia', shortName: 'Croazia', id: 'CRO' },
-      utcDate: '2026-09-26T18:45:00Z', // 20:45 CEST
+      utcDate: '2026-09-26T18:45:00Z',
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -113,7 +113,7 @@ export default function Home() {
       id: 'unl-2026-07',
       homeTeam: { name: 'Macedonia del Nord', shortName: 'Macedonia N.', id: 'MKD' },
       awayTeam: { name: 'Svizzera', shortName: 'Svizzera', id: 'SUI' },
-      utcDate: '2026-09-26T18:45:00Z', // 20:45 CEST
+      utcDate: '2026-09-26T18:45:00Z',
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -122,7 +122,7 @@ export default function Home() {
       id: 'unl-2026-08',
       homeTeam: { name: 'Inghilterra', shortName: 'Inghilterra', id: 'ENG' },
       awayTeam: { name: 'Spagna', shortName: 'Spagna', id: 'ESP' },
-      utcDate: '2026-09-26T18:45:00Z', // 20:45 CEST
+      utcDate: '2026-09-26T18:45:00Z',
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -131,7 +131,7 @@ export default function Home() {
       id: 'unl-2026-09',
       homeTeam: { name: 'Slovacchia', shortName: 'Slovacchia', id: 'SVK' },
       awayTeam: { name: 'Moldavia', shortName: 'Moldavia', id: 'MDA' },
-      utcDate: '2026-09-26T18:45:00Z', // 20:45 CEST
+      utcDate: '2026-09-26T18:45:00Z',
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -140,14 +140,14 @@ export default function Home() {
       id: 'unl-2026-10',
       homeTeam: { name: 'Albania', shortName: 'Albania', id: 'ALB' },
       awayTeam: { name: 'Bielorussia', shortName: 'Bielorussia', id: 'BLR' },
-      utcDate: '2026-09-26T18:45:00Z', // 20:45 CEST
+      utcDate: '2026-09-26T18:45:00Z',
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
     }
   ];
 
-  // Convocati Nazionali per il Datalist Marcatori
+  // Convocati Nazionali
   const nationalSquads = {
     SVN: ['Benjamin Šeško', 'Andraž Šporar', 'Jan Oblak', 'Petar Stojanović', 'Timi Max Elšnik'],
     SCO: ['Scott McTominay', 'John McGinn', 'Lyndon Dykes', 'Che Adams', 'Andy Robertson'],
@@ -537,7 +537,7 @@ export default function Home() {
     window.open(`https://wa.me/?text=${message}`, '_blank');
   };
 
-  // CARICA PARTITE (CON AUTOFOCUS SULLA PRIMA GIORNATA FUTURA/IN CORSO)
+  // CARICA PARTITE
   const fetchMatches = async (forcedMatchday = null) => {
     setLoading(true);
     setIsEditingPredictions(false);
@@ -598,6 +598,19 @@ export default function Home() {
     fetchMatches(null);
   }, [selectedLeague]);
 
+  // FUNZIONE UTILS: Trova la partita per un dato ID per recuperare i nomi reali delle squadre
+  const findMatchDetailsById = (matchId) => {
+    // 1. Cerca nelle partite attualmente caricate a schermo
+    const foundInCurrent = matches.find((m) => String(m.id) === String(matchId));
+    if (foundInCurrent) return foundInCurrent;
+
+    // 2. Cerca nelle partite fisse di Nations League
+    const foundInNL = nationsLeagueMatches.find((m) => String(m.id) === String(matchId));
+    if (foundInNL) return foundInNL;
+
+    return null;
+  };
+
   // Partecipanti Unici della Lega Attiva
   const leagueMembersList = Array.from(new Set(allLeaguePredictions.map(p => p.nickname)));
 
@@ -616,7 +629,7 @@ export default function Home() {
         userScores[pred.nickname] = { name: pred.nickname, matchdayPts: 0, exactScores: 0 };
       }
 
-      const match = matches.find((m) => String(m.id) === String(pred.match_id));
+      const match = findMatchDetailsById(pred.match_id);
       if (!match || match.status !== 'FINISHED') return;
 
       const realHome = match.score.fullTime.home;
@@ -1131,6 +1144,7 @@ export default function Home() {
               </div>
             )}
 
+            {/* VISTA DETTAGLIO SCHEDINA CON NOMI DI SQUADRA REALI */}
             {selectedMemberDetail ? (
               <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
                 <div className="flex justify-between items-center border-b border-slate-100 pb-2">
@@ -1149,17 +1163,27 @@ export default function Home() {
                 <div className="space-y-2">
                   {allLeaguePredictions
                     .filter((p) => p.nickname === selectedMemberDetail && p.match_id !== 'JOIN_ENTRY')
-                    .map((p) => (
-                      <div key={p.match_id} className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs space-y-1">
-                        <div className="flex justify-between font-bold text-slate-700">
-                          <span>Partita: #{p.match_id}</span>
-                          <span className="text-emerald-700">{p.home_score} - {p.away_score} ({p.outcome})</span>
+                    .map((p) => {
+                      const matchInfo = findMatchDetailsById(p.match_id);
+                      const homeName = matchInfo?.homeTeam?.shortName || matchInfo?.homeTeam?.name || `Partita ${p.match_id}`;
+                      const awayName = matchInfo?.awayTeam?.shortName || matchInfo?.awayTeam?.name || '';
+
+                      return (
+                        <div key={p.match_id} className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs space-y-1.5">
+                          <div className="flex justify-between items-center font-bold text-slate-800">
+                            <span>{awayName ? `${homeName} vs ${awayName}` : homeName}</span>
+                            <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md font-mono text-[11px]">
+                              {p.home_score} - {p.away_score} ({p.outcome})
+                            </span>
+                          </div>
+                          {p.scorer && (
+                            <p className="text-slate-500 text-[11px]">
+                              Marcatore: <span className="font-semibold text-slate-700">{p.scorer}</span>
+                            </p>
+                          )}
                         </div>
-                        {p.scorer && (
-                          <p className="text-slate-500 text-[11px]">Marcatore: <span className="font-semibold text-slate-700">{p.scorer}</span></p>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
 
                   {allLeaguePredictions.filter((p) => p.nickname === selectedMemberDetail && p.match_id !== 'JOIN_ENTRY').length === 0 && (
                     <p className="text-xs text-slate-400 p-2 text-center">Nessun pronostico inviato per questa lega.</p>
