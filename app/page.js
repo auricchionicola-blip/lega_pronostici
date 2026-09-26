@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Trophy, Calendar, Users, RefreshCw, Settings, Database, Share2, Copy, Check, UserCheck, LogOut, User, AlertCircle, CheckCircle, Save, Play, ChevronRight, Eye, PlusCircle, Layers, Lock, Award, History } from 'lucide-react';
+import { Trophy, Calendar, Users, RefreshCw, Settings, Database, Share2, Copy, Check, UserCheck, LogOut, User, AlertCircle, CheckCircle, Save, Play, ChevronRight, Eye, PlusCircle, Layers, Lock, History, Target } from 'lucide-react';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('matches');
@@ -232,7 +232,8 @@ export default function Home() {
                 homeScore: item.home_score !== null ? String(item.home_score) : '0',
                 awayScore: item.away_score !== null ? String(item.away_score) : '0',
                 outcome: item.outcome || 'X',
-                scorer: item.scorer || '',
+                homeScorers: item.scorer ? item.scorer.split(',').map(s => s.trim()).filter(Boolean) : [],
+                awayScorers: [] // Gestito unificato
               };
             }
           });
@@ -408,14 +409,15 @@ export default function Home() {
           homeScore: '0',
           awayScore: '0',
           outcome: 'X',
-          scorer: ''
+          homeScorers: [],
+          awayScorers: []
         };
       }
     });
 
     setUserPredictions(initialPreds);
     setIsEditingPredictions(true);
-    setDbStatus({ type: 'success', text: 'Modalità scommessa attivata! Modifica i risultati e clicca "Salva Tutti i Pronostici".' });
+    setDbStatus({ type: 'success', text: 'Modalità scommessa attivata! Modifica i risultati, seleziona i marcatori e clicca "Salva Tutti i Pronostici".' });
   };
 
   // SALVA TUTTI I PRONOSTICI DELLA LEGA CORRENTE
@@ -433,6 +435,8 @@ export default function Home() {
 
     const recordsToSave = Object.keys(userPredictions).map((matchId) => {
       const pred = userPredictions[matchId];
+      const allSelectedScorers = [...(pred.homeScorers || []), ...(pred.awayScorers || [])];
+
       return {
         league_code: activeLeagueCode,
         nickname: userName,
@@ -440,7 +444,7 @@ export default function Home() {
         home_score: pred.homeScore !== '' ? parseInt(pred.homeScore, 10) : 0,
         away_score: pred.awayScore !== '' ? parseInt(pred.awayScore, 10) : 0,
         outcome: pred.outcome || calculateOutcome(pred.homeScore, pred.awayScore) || 'X',
-        scorer: pred.scorer || null
+        scorer: allSelectedScorers.length > 0 ? allSelectedScorers.join(', ') : null
       };
     });
 
@@ -641,13 +645,16 @@ export default function Home() {
 
     let scorerPts = 0;
     if (pred.scorer && match.goals && Array.isArray(match.goals)) {
-      const hasScored = match.goals.some((g) =>
-        g.scorer?.name?.toLowerCase().includes(pred.scorer.toLowerCase())
-      );
-      if (hasScored) {
-        scorerPts = 2;
-        pts += 2;
-      }
+      const predictedScorersList = pred.scorer.split(',').map(s => s.trim().toLowerCase());
+      predictedScorersList.forEach((predictedScorer) => {
+        const hasScored = match.goals.some((g) =>
+          g.scorer?.name?.toLowerCase().includes(predictedScorer)
+        );
+        if (hasScored) {
+          scorerPts += 2;
+          pts += 2;
+        }
+      });
     }
 
     if (isExact) {
@@ -700,20 +707,49 @@ export default function Home() {
     return 'X';
   };
 
+  // Gestione Risultati
   const handleScoreChange = (matchId, team, value) => {
     if (!isEditingPredictions) return;
-    const currentPred = userPredictions[matchId] || { homeScore: '0', awayScore: '0', scorer: '' };
+    const currentPred = userPredictions[matchId] || { homeScore: '0', awayScore: '0', homeScorers: [], awayScorers: [] };
     const updated = { ...currentPred, [team]: value };
-    updated.outcome = calculateOutcome(updated.homeScore, updated.awayScore);
+    
+    // Se si riduce il punteggio, tronchiamo la lista marcatori eccedenti
+    const homeLimit = parseInt(updated.homeScore, 10) || 0;
+    const awayLimit = parseInt(updated.awayScore, 10) || 0;
 
+    if (updated.homeScorers && updated.homeScorers.length > homeLimit) {
+      updated.homeScorers = updated.homeScorers.slice(0, homeLimit);
+    }
+    if (updated.awayScorers && updated.awayScorers.length > awayLimit) {
+      updated.awayScorers = updated.awayScorers.slice(0, awayLimit);
+    }
+
+    updated.outcome = calculateOutcome(updated.homeScore, updated.awayScore);
     setUserPredictions((prev) => ({ ...prev, [matchId]: updated }));
   };
 
-  const handleScorerChange = (matchId, value) => {
-    if (!isEditingPredictions) return;
-    const currentPred = userPredictions[matchId] || { homeScore: '0', awayScore: '0', scorer: '' };
-    const updated = { ...currentPred, scorer: value };
+  // GESTIONE SELEZIONE/DESELEZIONE MARCATORI SQUADRA (Casa / Trasferta)
+  const toggleScorerSelection = (matchId, teamType, playerName, maxAllowed) => {
+    if (!isEditingPredictions || maxAllowed <= 0) return;
 
+    const currentPred = userPredictions[matchId] || { homeScore: '0', awayScore: '0', homeScorers: [], awayScorers: [] };
+    const fieldKey = teamType === 'home' ? 'homeScorers' : 'awayScorers';
+    const currentList = currentPred[fieldKey] || [];
+
+    let updatedList = [];
+    if (currentList.includes(playerName)) {
+      // Deseleziona
+      updatedList = currentList.filter(p => p !== playerName);
+    } else {
+      // Seleziona solo se sotto il limite
+      if (currentList.length < maxAllowed) {
+        updatedList = [...currentList, playerName];
+      } else {
+        return; // Limite raggiunto
+      }
+    }
+
+    const updated = { ...currentPred, [fieldKey]: updatedList };
     setUserPredictions((prev) => ({ ...prev, [matchId]: updated }));
   };
 
@@ -938,6 +974,12 @@ export default function Home() {
                   ? (nationalSquads[match.awayTeam.id] || []) 
                   : (teamsSquads[match.awayTeam?.id] || []);
 
+                const maxHomeScorersAllowed = parseInt(currentPred.homeScore, 10) || 0;
+                const maxAwayScorersAllowed = parseInt(currentPred.awayScore, 10) || 0;
+
+                const selectedHomeScorers = currentPred.homeScorers || [];
+                const selectedAwayScorers = currentPred.awayScorers || [];
+
                 return (
                   <div key={match.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 space-y-3">
                     <div className="flex justify-between items-center text-xs text-slate-500 border-b border-slate-100 pb-2">
@@ -956,6 +998,7 @@ export default function Home() {
                     </div>
 
                     <div className="bg-slate-50 p-3 rounded-xl space-y-3 border border-slate-200/80">
+                      {/* RISULTATO ESATTO */}
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-slate-600 font-semibold">Risultato Esatto:</span>
                         <div className="flex items-center space-x-2">
@@ -981,6 +1024,7 @@ export default function Home() {
                         </div>
                       </div>
 
+                      {/* ESITO CALCOLATO */}
                       <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
                         <span className="text-xs text-slate-500 font-medium">Esito (Calcolato):</span>
                         <div className="grid grid-cols-3 gap-1.5 w-36">
@@ -999,26 +1043,89 @@ export default function Home() {
                         </div>
                       </div>
 
-                      <div className="flex items-center space-x-2 pt-1 border-t border-slate-200/60">
-                        <span className="text-xs text-slate-600 w-24 font-medium">Marcatore:</span>
-                        <div className="flex-1">
-                          <input
-                            type="text"
-                            list={`players-${match.id}`}
-                            disabled={!isEditingPredictions || matchdayStarted}
-                            placeholder={isEditingPredictions ? "Digita o seleziona..." : "Nessun marcatore"}
-                            value={currentPred.scorer ?? ''}
-                            onChange={(e) => handleScorerChange(match.id, e.target.value)}
-                            className="w-full bg-white px-2.5 py-1 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm disabled:bg-slate-100 disabled:text-slate-500"
-                          />
-                          <datalist id={`players-${match.id}`}>
-                            {homeSquad.map((player, idx) => (
-                              <option key={`h-${idx}`} value={player} />
-                            ))}
-                            {awaySquad.map((player, idx) => (
-                              <option key={`a-${idx}`} value={player} />
-                            ))}
-                          </datalist>
+                      {/* SELEZIONE MARCATORI DINAMICA */}
+                      <div className="pt-2 border-t border-slate-200/60 space-y-2">
+                        <div className="flex justify-between items-center text-xs font-semibold text-slate-700">
+                          <span className="flex items-center space-x-1">
+                            <Target className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Marcatori Previsti:</span>
+                          </span>
+                        </div>
+
+                        {/* SEZIONE MARCATORI CASA (SFONDO CELESTE) */}
+                        <div className="bg-sky-50/70 border border-sky-200 p-2.5 rounded-xl space-y-1.5">
+                          <div className="flex justify-between items-center text-[11px] font-bold text-sky-900">
+                            <span>{homeName} (Casa)</span>
+                            <span>{selectedHomeScorers.length} / {maxHomeScorersAllowed} gol</span>
+                          </div>
+
+                          {maxHomeScorersAllowed === 0 ? (
+                            <p className="text-[10px] text-sky-600 italic">Nessun gol inserito per la squadra di casa.</p>
+                          ) : (
+                            <div className="flex flex-wrap gap-1.5 pt-0.5">
+                              {homeSquad.map((player) => {
+                                const isSelected = selectedHomeScorers.includes(player);
+                                const isMaxReached = selectedHomeScorers.length >= maxHomeScorersAllowed;
+                                const isDisabled = !isSelected && isMaxReached;
+
+                                return (
+                                  <button
+                                    key={player}
+                                    type="button"
+                                    disabled={!isEditingPredictions || matchdayStarted || isDisabled}
+                                    onClick={() => toggleScorerSelection(match.id, 'home', player, maxHomeScorersAllowed)}
+                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all border ${
+                                      isSelected
+                                        ? 'bg-sky-600 text-white border-sky-700 shadow-sm scale-105'
+                                        : isDisabled
+                                        ? 'bg-sky-100/50 text-sky-300 border-sky-200 opacity-40 cursor-not-allowed'
+                                        : 'bg-white text-sky-800 border-sky-200 hover:bg-sky-100'
+                                    }`}
+                                  >
+                                    {player} {isSelected ? '✓' : ''}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* SEZIONE MARCATORI TRASFERTA (SFONDO OCRA/AMBRA) */}
+                        <div className="bg-amber-50/70 border border-amber-200 p-2.5 rounded-xl space-y-1.5">
+                          <div className="flex justify-between items-center text-[11px] font-bold text-amber-900">
+                            <span>{awayName} (Trasferta)</span>
+                            <span>{selectedAwayScorers.length} / {maxAwayScorersAllowed} gol</span>
+                          </div>
+
+                          {maxAwayScorersAllowed === 0 ? (
+                            <p className="text-[10px] text-amber-600 italic">Nessun gol inserito per la squadra in trasferta.</p>
+                          ) : (
+                            <div className="flex flex-wrap gap-1.5 pt-0.5">
+                              {awaySquad.map((player) => {
+                                const isSelected = selectedAwayScorers.includes(player);
+                                const isMaxReached = selectedAwayScorers.length >= maxAwayScorersAllowed;
+                                const isDisabled = !isSelected && isMaxReached;
+
+                                return (
+                                  <button
+                                    key={player}
+                                    type="button"
+                                    disabled={!isEditingPredictions || matchdayStarted || isDisabled}
+                                    onClick={() => toggleScorerSelection(match.id, 'away', player, maxAwayScorersAllowed)}
+                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all border ${
+                                      isSelected
+                                        ? 'bg-amber-600 text-white border-amber-700 shadow-sm scale-105'
+                                        : isDisabled
+                                        ? 'bg-amber-100/50 text-amber-300 border-amber-200 opacity-40 cursor-not-allowed'
+                                        : 'bg-white text-amber-800 border-amber-200 hover:bg-amber-100'
+                                    }`}
+                                  >
+                                    {player} {isSelected ? '✓' : ''}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1232,7 +1339,7 @@ export default function Home() {
 
                           {p.scorer && (
                             <div className="text-[11px] text-slate-600 border-t border-slate-200/40 pt-1 flex justify-between">
-                              <span>Marcatore scelto: <strong className="text-slate-800">{p.scorer}</strong></span>
+                              <span>Marcatori scelti: <strong className="text-slate-800">{p.scorer}</strong></span>
                             </div>
                           )}
                         </div>
