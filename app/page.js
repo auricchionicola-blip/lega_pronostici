@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Trophy, Calendar, Users, RefreshCw, Settings, Database, Share2, Copy, Check, UserCheck, LogOut, User, AlertCircle, CheckCircle, Save, Play, ChevronRight, Eye, PlusCircle, Layers, Lock, History, Target } from 'lucide-react';
+import { Trophy, Calendar, Users, RefreshCw, Settings, Database, Share2, Copy, Check, UserCheck, LogOut, User, AlertCircle, CheckCircle, Save, Play, ChevronRight, Eye, PlusCircle, Layers, Lock, History, Target, Edit3 } from 'lucide-react';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('matches');
@@ -233,7 +233,7 @@ export default function Home() {
                 awayScore: item.away_score !== null ? String(item.away_score) : '0',
                 outcome: item.outcome || 'X',
                 homeScorers: item.scorer ? item.scorer.split(',').map(s => s.trim()).filter(Boolean) : [],
-                awayScorers: [] // Gestito unificato
+                awayScorers: []
               };
             }
           });
@@ -393,7 +393,13 @@ export default function Home() {
     });
   };
 
-  // INIZIALIZZA PRONOSTICI PER LA GIORNATA ("Pronostica")
+  // VERIFICA SE L'UTENTE HA GIÀ SALVATO PRONOSTICI PER QUESTA GIORNATA
+  const hasUserSavedPredictionsForMatchday = () => {
+    if (!matches || matches.length === 0) return false;
+    return matches.some((m) => !!userPredictions[m.id]);
+  };
+
+  // INIZIALIZZA/MODIFICA PRONOSTICI PER LA GIORNATA
   const handleStartPredictionsForMatchday = () => {
     if (isMatchdayStartedOrFinished()) {
       setDbStatus({ type: 'error', text: 'Impossibile pronosticare: la prima partita di questa giornata è già iniziata!' });
@@ -417,7 +423,7 @@ export default function Home() {
 
     setUserPredictions(initialPreds);
     setIsEditingPredictions(true);
-    setDbStatus({ type: 'success', text: 'Modalità scommessa attivata! Modifica i risultati, seleziona i marcatori e clicca "Salva Tutti i Pronostici".' });
+    setDbStatus({ type: 'success', text: 'Modalità modifica attivata! Aggiorna i punteggi e premi "Salva Tutti i Pronostici".' });
   };
 
   // SALVA TUTTI I PRONOSTICI DELLA LEGA CORRENTE
@@ -449,7 +455,7 @@ export default function Home() {
     });
 
     if (recordsToSave.length === 0) {
-      setDbStatus({ type: 'error', text: 'Nessun pronostico inserito. Clicca su "Pronostica".' });
+      setDbStatus({ type: 'error', text: 'Nessun pronostico inserito.' });
       setSavingPredictions(false);
       return;
     }
@@ -464,7 +470,7 @@ export default function Home() {
       const resJson = await res.json();
 
       if (res.ok && resJson.success) {
-        setDbStatus({ type: 'success', text: `Pronostici salvati per la lega ${activeLeagueCode}!` });
+        setDbStatus({ type: 'success', text: `Pronostici salvati con successo per la lega ${activeLeagueCode}!` });
         setIsEditingPredictions(false);
         fetchLeagueData();
       } else {
@@ -713,7 +719,6 @@ export default function Home() {
     const currentPred = userPredictions[matchId] || { homeScore: '0', awayScore: '0', homeScorers: [], awayScorers: [] };
     const updated = { ...currentPred, [team]: value };
     
-    // Se si riduce il punteggio, tronchiamo la lista marcatori eccedenti
     const homeLimit = parseInt(updated.homeScore, 10) || 0;
     const awayLimit = parseInt(updated.awayScore, 10) || 0;
 
@@ -728,7 +733,7 @@ export default function Home() {
     setUserPredictions((prev) => ({ ...prev, [matchId]: updated }));
   };
 
-  // GESTIONE SELEZIONE/DESELEZIONE MARCATORI SQUADRA (Casa / Trasferta)
+  // GESTIONE SELEZIONE/DESELEZIONE MARCATORI
   const toggleScorerSelection = (matchId, teamType, playerName, maxAllowed) => {
     if (!isEditingPredictions || maxAllowed <= 0) return;
 
@@ -738,14 +743,12 @@ export default function Home() {
 
     let updatedList = [];
     if (currentList.includes(playerName)) {
-      // Deseleziona
       updatedList = currentList.filter(p => p !== playerName);
     } else {
-      // Seleziona solo se sotto il limite
       if (currentList.length < maxAllowed) {
         updatedList = [...currentList, playerName];
       } else {
-        return; // Limite raggiunto
+        return;
       }
     }
 
@@ -772,6 +775,7 @@ export default function Home() {
   };
 
   const matchdayStarted = isMatchdayStartedOrFinished();
+  const hasSavedPreds = hasUserSavedPredictionsForMatchday();
 
   // PRIMA REGISTRAZIONE UTENTE
   if (!userName) {
@@ -922,22 +926,39 @@ export default function Home() {
                   </>
                 )}
 
+                {/* DINAMICA PULSANTE PRONOSTICA / MODIFICA / BLOCCATO */}
                 {matchdayStarted ? (
-                  <div className="bg-slate-100 text-slate-500 border border-slate-200 px-2.5 py-1.5 rounded-lg text-[11px] font-bold flex items-center space-x-1">
-                    <Lock className="w-3 h-3 text-red-500" />
-                    <span>Iniziata</span>
+                  <div className="bg-slate-100 text-slate-500 border border-slate-200 px-2.5 py-1.5 rounded-lg text-[11px] font-bold flex items-center space-x-1 cursor-not-allowed">
+                    <Lock className="w-3 h-3 text-slate-400" />
+                    <span>Pronostici Bloccati</span>
                   </div>
                 ) : (
                   <button
                     onClick={handleStartPredictionsForMatchday}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1 shadow-sm transition-all ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-sm transition-all ${
                       isEditingPredictions
                         ? 'bg-emerald-700 text-white ring-2 ring-emerald-400'
+                        : hasSavedPreds
+                        ? 'bg-sky-600 hover:bg-sky-700 text-white'
                         : 'bg-amber-500 hover:bg-amber-600 text-white'
                     }`}
                   >
-                    <Play className="w-3 h-3 fill-current" />
-                    <span>{isEditingPredictions ? 'Modifica In Corso' : 'Pronostica'}</span>
+                    {isEditingPredictions ? (
+                      <>
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Modifica In Corso</span>
+                      </>
+                    ) : hasSavedPreds ? (
+                      <>
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Modifica Pronostici</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                        <span>Pronostica</span>
+                      </>
+                    )}
                   </button>
                 )}
               </div>
@@ -946,7 +967,7 @@ export default function Home() {
             {matchdayStarted && (
               <div className="bg-amber-50 border border-amber-200 text-amber-800 p-2.5 rounded-xl text-xs flex items-center space-x-2">
                 <Lock className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                <span>La giornata è iniziata. I pronostici per queste partite sono bloccati.</span>
+                <span>La prima partita della giornata è iniziata. Non è più possibile inserire o modificare pronostici.</span>
               </div>
             )}
 
