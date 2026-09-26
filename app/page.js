@@ -67,22 +67,13 @@ export default function Home() {
     { id: 'EL', name: 'Europa League', country: '🇪🇺' },
   ];
 
-  // PARTITE NATIONS LEAGUE DI OGGI
+  // PARTITE NATIONS LEAGUE DI OGGI (Slovenia-Scozia rimossa per il test)
   const nationsLeagueMatches = [
-    {
-      id: 'unl-2026-01',
-      homeTeam: { name: 'Slovenia', shortName: 'Slovenia', id: 'SVN' },
-      awayTeam: { name: 'Scozia', shortName: 'Scozia', id: 'SCO' },
-      utcDate: '2026-09-26T13:00:00Z',
-      status: 'TIMED',
-      score: { fullTime: { home: null, away: null } },
-      goals: []
-    },
     {
       id: 'unl-2026-02',
       homeTeam: { name: 'Fær Øer', shortName: 'Fær Øer', id: 'FRO' },
       awayTeam: { name: 'Kazakistan', shortName: 'Kazakistan', id: 'KAZ' },
-      utcDate: '2026-09-26T16:00:00Z',
+      utcDate: '2026-09-26T16:00:00Z', // 18:00 CEST
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -91,7 +82,7 @@ export default function Home() {
       id: 'unl-2026-03',
       homeTeam: { name: 'San Marino', shortName: 'San Marino', id: 'SMR' },
       awayTeam: { name: 'Finlandia', shortName: 'Finlandia', id: 'FIN' },
-      utcDate: '2026-09-26T16:00:00Z',
+      utcDate: '2026-09-26T16:00:00Z', // 18:00 CEST
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -100,7 +91,7 @@ export default function Home() {
       id: 'unl-2026-04',
       homeTeam: { name: 'Islanda', shortName: 'Islanda', id: 'ISL' },
       awayTeam: { name: 'Estonia', shortName: 'Estonia', id: 'EST' },
-      utcDate: '2026-09-26T16:00:00Z',
+      utcDate: '2026-09-26T16:00:00Z', // 18:00 CEST
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -109,7 +100,7 @@ export default function Home() {
       id: 'unl-2026-05',
       homeTeam: { name: 'Bulgaria', shortName: 'Bulgaria', id: 'BUL' },
       awayTeam: { name: 'Lussemburgo', shortName: 'Lussemburgo', id: 'LUX' },
-      utcDate: '2026-09-26T16:00:00Z',
+      utcDate: '2026-09-26T16:00:00Z', // 18:00 CEST
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -118,7 +109,7 @@ export default function Home() {
       id: 'unl-2026-06',
       homeTeam: { name: 'Repubblica Ceca', shortName: 'Rep. Ceca', id: 'CZE' },
       awayTeam: { name: 'Croazia', shortName: 'Croazia', id: 'CRO' },
-      utcDate: '2026-09-26T18:45:00Z',
+      utcDate: '2026-09-26T18:45:00Z', // 20:45 CEST
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -127,7 +118,7 @@ export default function Home() {
       id: 'unl-2026-07',
       homeTeam: { name: 'Macedonia del Nord', shortName: 'Macedonia N.', id: 'MKD' },
       awayTeam: { name: 'Svizzera', shortName: 'Svizzera', id: 'SUI' },
-      utcDate: '2026-09-26T18:45:00Z',
+      utcDate: '2026-09-26T18:45:00Z', // 20:45 CEST
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -136,7 +127,7 @@ export default function Home() {
       id: 'unl-2026-08',
       homeTeam: { name: 'Inghilterra', shortName: 'Inghilterra', id: 'ENG' },
       awayTeam: { name: 'Spagna', shortName: 'Spagna', id: 'ESP' },
-      utcDate: '2026-09-26T18:45:00Z',
+      utcDate: '2026-09-26T18:45:00Z', // 20:45 CEST
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -145,7 +136,7 @@ export default function Home() {
       id: 'unl-2026-09',
       homeTeam: { name: 'Slovacchia', shortName: 'Slovacchia', id: 'SVK' },
       awayTeam: { name: 'Moldavia', shortName: 'Moldavia', id: 'MDA' },
-      utcDate: '2026-09-26T18:45:00Z',
+      utcDate: '2026-09-26T18:45:00Z', // 20:45 CEST
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -154,7 +145,7 @@ export default function Home() {
       id: 'unl-2026-10',
       homeTeam: { name: 'Albania', shortName: 'Albania', id: 'ALB' },
       awayTeam: { name: 'Bielorussia', shortName: 'Bielorussia', id: 'BLR' },
-      utcDate: '2026-09-26T18:45:00Z',
+      utcDate: '2026-09-26T18:45:00Z', // 20:45 CEST
       status: 'TIMED',
       score: { fullTime: { home: null, away: null } },
       goals: []
@@ -167,7 +158,7 @@ export default function Home() {
     SCO: ['Scott McTominay', 'John McGinn', 'Lyndon Dykes', 'Che Adams', 'Andy Robertson'],
     FRO: ['Klámint Olsen', 'Jóannes Bjartalíð', 'Sølvi Vatnhamar', 'Meinhard Olsen'],
     KAZ: ['Baktiyar Zaynutdinov', 'Abat Aimbetov', 'Islam Chesnokov', 'Ramazan Orazov'],
-    SMR: ['FilippoBerardi', 'Nicola Nanni', 'Matteo Vitaioli', 'Lorenzo Lazzari'],
+    SMR: ['Filippo Berardi', 'Nicola Nanni', 'Matteo Vitaioli', 'Lorenzo Lazzari'],
     FIN: ['Teemu Pukki', 'Joel Pohjanpalo', 'Glen Kamara', 'Benjamin Källman'],
     ISL: ['Albert Guðmundsson', 'Orri Óskarsson', 'Hákon Arnar Haraldsson', 'Ísak Bergmann Jóhannesson'],
     EST: ['Henri Anier', 'Mattias Käit', 'Rauno Sappinen', 'Oliver Jürgens'],
@@ -815,6 +806,7 @@ export default function Home() {
     return 'X';
   };
 
+  // Gestione Risultati
   const handleScoreChange = (matchId, team, value) => {
     if (!isEditingPredictions) return;
     const currentPred = userPredictions[matchId] || { homeScore: '0', awayScore: '0', homeScorers: [], awayScorers: [] };
