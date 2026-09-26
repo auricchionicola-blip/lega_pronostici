@@ -30,8 +30,8 @@ export default function Home() {
 
   // Configurazione Diretta Supabase
   const baseUrl = 'https://ciklkrqvzaputhoilstl.supabase.co';
-  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpa2xrcXZ6YXB1dGhvaWxzdGwiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc0MTE5ODE3NCwiZXhwIjoyMDU2Nzc0MTc0fQ.EY-5Tq6dJ1V82EaK-b-m0gYqQJdIn3T2bY6P5W5K7XQ';
-
+  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpa2xrcXZ6YXB1dGhvaWxzdGwiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc5MDM5Mzc2OSwiZXhwIjoyMTA1OTY5NzY5fQ.gG7bNKaYpX0-qaO6XyBDiizwl1-N0N1pOGIalQMdrGs';
+  
   const leagues = [
     { id: 'SA', name: 'Serie A', country: '🇮🇹' },
     { id: 'UNL', name: 'Nations League', country: '🇪🇺' },
