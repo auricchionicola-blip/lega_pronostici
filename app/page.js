@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Trophy, Calendar, Users, RefreshCw, Settings, Database, Share2, Copy, Check, UserCheck, LogOut, User, AlertCircle, CheckCircle, Save, Play, ChevronRight, ChevronDown, Eye, PlusCircle, Layers, Lock, History, Target, Edit3, Key, Shield, Award, Medal, Zap, Star } from 'lucide-react';
+import { Trophy, Calendar, Users, RefreshCw, Settings, Database, Share2, Copy, Check, UserCheck, LogOut, User, AlertCircle, CheckCircle, Save, Play, ChevronRight, ChevronDown, Eye, PlusCircle, Layers, Lock, History, Target, Edit3, Key, Shield, Award, Star, LogIn } from 'lucide-react';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('matches');
@@ -11,16 +11,20 @@ export default function Home() {
   const [userPredictions, setUserPredictions] = useState({});
   const [copied, setCopied] = useState(false);
 
-  // Sotto-tab della sezione Classifica ('standard', 'achievements', 'badges')
+  // Sotto-tab Classifica
   const [standingsSubTab, setStandingsSubTab] = useState('standard');
 
   // Stato Scommessa Attiva
   const [isEditingPredictions, setIsEditingPredictions] = useState(false);
 
-  // Profilo Utente Univoco & Leghe Iscritte
+  // SCHERMATA LOGIN / REGISTRAZIONE UTENTE
+  const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
   const [userName, setUserName] = useState('');
-  const [inputName, setInputName] = useState('');
+  const [authUsernameInput, setAuthUsernameInput] = useState('');
+  const [authPasswordInput, setAuthPasswordInput] = useState('');
+  const [firstLeagueInput, setFirstLeagueInput] = useState('');
   
+  // Leghe dell'Utente da Supabase
   const [userLeagues, setUserLeagues] = useState([]);
   const [activeLeagueCode, setActiveLeagueCode] = useState('');
   const [inputNewCode, setInputNewCode] = useState('');
@@ -31,27 +35,28 @@ export default function Home() {
   const [adminPasswordInput, setInputAdminPassword] = useState('');
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
-  // Stato Espansione Gerarchica Tab Pronostici (Lega -> Utente -> Campionato)
+  // Espansione Tab Pronostici
   const [expandedLeague, setExpandedLeague] = useState(null);
   const [expandedUser, setExpandedLeagueUser] = useState(null);
   const [selectedChampFilter, setSelectedChampFilter] = useState('UNL');
 
-  // Stato Debug e Log
+  // Debug e Log
   const [dbStatus, setDbStatus] = useState(null);
+  const [authenticating, setAuthenticating] = useState(false);
   const [savingLega, setSavingLega] = useState(false);
   const [savingPredictions, setSavingPredictions] = useState(false);
 
-  // Dati condivisi della Lega da Supabase
+  // Dati condivisi da Supabase
   const [allLeaguePredictions, setAllLeaguePredictions] = useState([]);
 
-  // Stato API e Rose
+  // API e Rose
   const [matches, setMatches] = useState([]);
   const [teamsSquads, setTeamsSquads] = useState({});
   const [loading, setLoading] = useState(true);
   const [syncingSquads, setSyncingSquads] = useState(false);
   const [syncMessage, setSyncMessage] = useState('');
 
-  // Campionati supportati
+  // Campionati
   const leagues = [
     { id: 'UNL', name: 'Nations League', country: '🇪🇺' },
     { id: 'SA', name: 'Serie A', country: '🇮🇹' },
@@ -162,7 +167,7 @@ export default function Home() {
     SCO: ['Scott McTominay', 'John McGinn', 'Lyndon Dykes', 'Che Adams', 'Andy Robertson'],
     FRO: ['Klámint Olsen', 'Jóannes Bjartalíð', 'Sølvi Vatnhamar', 'Meinhard Olsen'],
     KAZ: ['Baktiyar Zaynutdinov', 'Abat Aimbetov', 'Islam Chesnokov', 'Ramazan Orazov'],
-    SMR: ['Filippo Berardi', 'Nicola Nanni', 'Matteo Vitaioli', 'Lorenzo Lazzari'],
+    SMR: ['FilippoBerardi', 'Nicola Nanni', 'Matteo Vitaioli', 'Lorenzo Lazzari'],
     FIN: ['Teemu Pukki', 'Joel Pohjanpalo', 'Glen Kamara', 'Benjamin Källman'],
     ISL: ['Albert Guðmundsson', 'Orri Óskarsson', 'Hákon Arnar Haraldsson', 'Ísak Bergmann Jóhannesson'],
     EST: ['Henri Anier', 'Mattias Käit', 'Rauno Sappinen', 'Oliver Jürgens'],
@@ -180,31 +185,36 @@ export default function Home() {
     BLR: ['Max Ebong', 'Vitaly Lisakovich', 'Vladislav Morozov', 'Valery Gromyko']
   };
 
-  // Caricamento Iniziale Profilo Utente & Leghe
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const codeFromUrl = urlParams.get('code');
-    if (codeFromUrl) setInputNewCode(codeFromUrl.toUpperCase());
+  // CARICA LEGHE DELL'UTENTE DA SUPABASE
+  const fetchUserLeaguesFromDB = async (user) => {
+    try {
+      const res = await fetch(`/api/predictions?action=get_user_leagues&username=${encodeURIComponent(user)}`);
+      const data = await res.json();
 
-    const savedName = localStorage.getItem('user_nickname');
-    const savedLeaguesJson = localStorage.getItem('user_leagues_list');
-    const savedActiveLeague = localStorage.getItem('user_active_league_code');
+      if (Array.isArray(data) && data.length > 0) {
+        const leagueCodes = data.map((item) => item.league_code);
+        setUserLeagues(leagueCodes);
 
-    if (savedName) setUserName(savedName);
-
-    let parsedLeagues = [];
-    if (savedLeaguesJson) {
-      try {
-        parsedLeagues = JSON.parse(savedLeaguesJson);
-      } catch (e) {
-        console.error(e);
+        const savedActive = localStorage.getItem('user_active_league_code');
+        const active = (savedActive && leagueCodes.includes(savedActive)) ? savedActive : leagueCodes[0];
+        
+        setActiveLeagueCode(active);
+        setExpandedLeague(active);
+        localStorage.setItem('user_active_league_code', active);
+      } else {
+        setUserLeagues([]);
+        setActiveLeagueCode('');
       }
+    } catch (e) {
+      console.error('Errore recupero leghe utente:', e);
     }
+  };
 
-    if (parsedLeagues.length > 0) {
-      setUserLeagues(parsedLeagues);
-      setActiveLeagueCode(savedActiveLeague || parsedLeagues[0]);
-      setExpandedLeague(savedActiveLeague || parsedLeagues[0]);
+  useEffect(() => {
+    const savedName = localStorage.getItem('user_nickname');
+    if (savedName) {
+      setUserName(savedName);
+      fetchUserLeaguesFromDB(savedName);
     }
 
     const loadedSquads = {};
@@ -222,7 +232,7 @@ export default function Home() {
     setTeamsSquads(loadedSquads);
   }, []);
 
-  // Carica i Pronostici della Lega Attiva da Supabase
+  // CARICA PRONOSTICI DELLA LEGA
   const fetchLeagueData = async () => {
     if (!activeLeagueCode) return;
 
@@ -260,59 +270,71 @@ export default function Home() {
     }
   }, [userName, activeLeagueCode, matches]);
 
-  // CREAZIONE PROFILO E PRIMA LEGA
-  const handleInitialUserRegister = async (e) => {
+  // AUTENTICAZIONE: REGISTRAZIONE E LOGIN GLOBALE
+  const handleAuthSubmit = async (e) => {
     e.preventDefault();
-    if (!inputName.trim()) return;
+    if (!authUsernameInput.trim() || !authPasswordInput.trim()) return;
 
-    setSavingLega(true);
+    setAuthenticating(true);
     setDbStatus(null);
 
-    const nick = inputName.trim();
-    const firstLeagueCode = inputNewCode.trim() ? inputNewCode.trim().toUpperCase() : 'LEGA-8492';
+    const user = authUsernameInput.trim();
+    const pass = authPasswordInput.trim();
 
     try {
-      const res = await fetch('/api/predictions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          league_code: firstLeagueCode,
-          nickname: nick,
-          match_id: 'JOIN_ENTRY',
-          home_score: null,
-          away_score: null,
-          outcome: null,
-          scorer: null
-        }),
-      });
+      if (authMode === 'register') {
+        const firstLeague = firstLeagueInput.trim() ? firstLeagueInput.trim().toUpperCase() : 'LEGA-8492';
 
-      const result = await res.json();
+        const res = await fetch('/api/predictions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'register', username: user, password: pass }),
+        });
 
-      if (res.ok && result.success) {
-        localStorage.setItem('user_nickname', nick);
-        
-        const newLeaguesList = [firstLeagueCode];
-        localStorage.setItem('user_leagues_list', JSON.stringify(newLeaguesList));
-        localStorage.setItem('user_active_league_code', firstLeagueCode);
+        const result = await res.json();
 
-        setUserName(nick);
-        setUserLeagues(newLeaguesList);
-        setActiveLeagueCode(firstLeagueCode);
-        setExpandedLeague(firstLeagueCode);
+        if (res.ok && result.success) {
+          // Iscrivi l'utente alla prima lega
+          await fetch('/api/predictions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'join_league', username: user, league_code: firstLeague }),
+          });
 
-        setDbStatus({ type: 'success', text: `Profilo "${nick}" creato e iscritto alla lega ${firstLeagueCode}!` });
-        fetchLeagueData();
+          localStorage.setItem('user_nickname', user);
+          setUserName(user);
+          setDbStatus({ type: 'success', text: `Registrazione completata! Benvenuto, ${user}.` });
+          fetchUserLeaguesFromDB(user);
+        } else {
+          setDbStatus({ type: 'error', text: result.error || 'Errore registrazione.' });
+        }
       } else {
-        setDbStatus({ type: 'error', text: `Errore Registrazione: ${result.error || JSON.stringify(result)}` });
+        // LOGIN
+        const res = await fetch('/api/predictions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'login', username: user, password: pass }),
+        });
+
+        const result = await res.json();
+
+        if (res.ok && result.success) {
+          localStorage.setItem('user_nickname', result.username);
+          setUserName(result.username);
+          setDbStatus({ type: 'success', text: `Bentornato, ${result.username}!` });
+          fetchUserLeaguesFromDB(result.username);
+        } else {
+          setDbStatus({ type: 'error', text: result.error || 'Username o Password errati.' });
+        }
       }
     } catch (err) {
       setDbStatus({ type: 'error', text: `Errore Rete: ${err.message}` });
     } finally {
-      setSavingLega(false);
+      setAuthenticating(false);
     }
   };
 
-  // AGGIUNGI NUOVA LEGA A UTENTE ESISTENTE
+  // UNIRSI A UNA NUOVA LEGA
   const handleAddNewLeague = async (e) => {
     e.preventDefault();
     if (!inputNewCode.trim()) return;
@@ -322,48 +344,22 @@ export default function Home() {
 
     const code = inputNewCode.trim().toUpperCase();
 
-    if (userLeagues.includes(code)) {
-      setActiveLeagueCode(code);
-      setExpandedLeague(code);
-      localStorage.setItem('user_active_league_code', code);
-      setShowAddLeagueModal(false);
-      setInputNewCode('');
-      setSavingLega(false);
-      return;
-    }
-
     try {
       const res = await fetch('/api/predictions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          league_code: code,
-          nickname: userName,
-          match_id: 'JOIN_ENTRY',
-          home_score: null,
-          away_score: null,
-          outcome: null,
-          scorer: null
-        }),
+        body: JSON.stringify({ action: 'join_league', username: userName, league_code: code }),
       });
 
       const result = await res.json();
 
       if (res.ok && result.success) {
-        const updatedLeagues = [...userLeagues, code];
-        setUserLeagues(updatedLeagues);
-        setActiveLeagueCode(code);
-        setExpandedLeague(code);
-
-        localStorage.setItem('user_leagues_list', JSON.stringify(updatedLeagues));
-        localStorage.setItem('user_active_league_code', code);
-
         setShowAddLeagueModal(false);
         setInputNewCode('');
         setDbStatus({ type: 'success', text: `Ti sei unito alla nuova lega ${code}!` });
-        fetchLeagueData();
+        fetchUserLeaguesFromDB(userName);
       } else {
-        setDbStatus({ type: 'error', text: `Errore iscrizione lega: ${result.error || JSON.stringify(result)}` });
+        setDbStatus({ type: 'error', text: result.error || 'Errore aggiunta lega.' });
       }
     } catch (err) {
       setDbStatus({ type: 'error', text: `Errore Rete: ${err.message}` });
@@ -372,7 +368,7 @@ export default function Home() {
     }
   };
 
-  // SELEZIONA LEGA ATTIVA DALLA LISTA
+  // SELEZIONA LEGA ATTIVA
   const handleSelectActiveLeague = (code) => {
     setActiveLeagueCode(code);
     setExpandedLeague(code);
@@ -380,9 +376,9 @@ export default function Home() {
     setDbStatus({ type: 'success', text: `Passato alla lega ${code}` });
   };
 
-  // RESET COMPLETO PROFILO
-  const handleResetFullProfile = () => {
-    if (confirm('Sei sicuro di voler resettare il tuo profilo utente su questo dispositivo?')) {
+  // LOGOUT GLOBALE
+  const handleLogout = () => {
+    if (confirm('Vuoi uscire dal tuo account su questo dispositivo?')) {
       localStorage.clear();
       setUserName('');
       setUserLeagues([]);
@@ -697,7 +693,7 @@ export default function Home() {
     }
   };
 
-  // CALCOLO CLASSIFICA STANDARD SULLE PARTITE CONCLUSE
+  // CALCOLO CLASSIFICA STANDARD
   const calculateGroupLeaderboard = () => {
     const userScores = {};
 
@@ -724,7 +720,7 @@ export default function Home() {
     return Object.values(userScores).sort((a, b) => b.matchdayPts - a.matchdayPts);
   };
 
-  // CALCOLO OBIETTIVI / ACHIEVEMENTS E CLASSIFICA PARALLELA
+  // CALCOLO CLASSIFICA OBIETTIVI
   const calculateAchievementsForUsers = () => {
     const userAchievements = {};
 
@@ -735,10 +731,7 @@ export default function Home() {
         totalExacts: 0,
         totalOutcomes: 0,
         totalScorers: 0,
-        unlockedBadges: [],
-        dayScorersCounts: {},
-        dayExactsCounts: {},
-        dayOutcomesCounts: {}
+        unlockedBadges: []
       };
     });
 
@@ -752,10 +745,7 @@ export default function Home() {
           totalExacts: 0,
           totalOutcomes: 0,
           totalScorers: 0,
-          unlockedBadges: [],
-          dayScorersCounts: {},
-          dayExactsCounts: {},
-          dayOutcomesCounts: {}
+          unlockedBadges: []
         };
       }
 
@@ -783,26 +773,22 @@ export default function Home() {
       }
     });
 
-    // Calcolo Punti Achievement e Assegnazione Badge
     Object.values(userAchievements).forEach((u) => {
       let pts = 0;
       const badges = [];
 
-      // 1. Ogni 10 Marcatori Totali (+100 pt per blocco di 10)
       const scorerBlocks = Math.floor(u.totalScorers / 10);
       if (scorerBlocks > 0) {
         pts += scorerBlocks * 100;
         badges.push(`⚽ Cecchino (${u.totalScorers} Marcatori) [+${scorerBlocks * 100}pt]`);
       }
 
-      // 2. Ogni 10 Risultati Esatti Totali (+150 pt per blocco di 10)
       const exactBlocks = Math.floor(u.totalExacts / 10);
       if (exactBlocks > 0) {
         pts += exactBlocks * 150;
         badges.push(`🎯 Mago Esatti (${u.totalExacts} Esatti) [+${exactBlocks * 150}pt]`);
       }
 
-      // 3. Ogni 10 Esiti Totali (+30 pt per blocco di 10)
       const outcomeBlocks = Math.floor(u.totalOutcomes / 10);
       if (outcomeBlocks > 0) {
         pts += outcomeBlocks * 30;
@@ -829,7 +815,6 @@ export default function Home() {
     return 'X';
   };
 
-  // Gestione Risultati
   const handleScoreChange = (matchId, team, value) => {
     if (!isEditingPredictions) return;
     const currentPred = userPredictions[matchId] || { homeScore: '0', awayScore: '0', homeScorers: [], awayScorers: [] };
@@ -849,7 +834,6 @@ export default function Home() {
     setUserPredictions((prev) => ({ ...prev, [matchId]: updated }));
   };
 
-  // GESTIONE SELEZIONE/DESELEZIONE MARCATORI
   const toggleScorerSelection = (matchId, teamType, playerName, maxAllowed) => {
     if (!isEditingPredictions || maxAllowed <= 0) return;
 
@@ -893,7 +877,7 @@ export default function Home() {
   const matchdayStarted = isMatchdayStartedOrFinished();
   const hasSavedPreds = hasUserSavedPredictionsForMatchday();
 
-  // PRIMA REGISTRAZIONE UTENTE
+  // PRIMA REGISTRAZIONE / LOGIN UTENTE
   if (!userName) {
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4 text-slate-800 font-sans">
@@ -903,10 +887,30 @@ export default function Home() {
           </div>
 
           <div>
-            <h1 className="text-xl font-bold text-slate-800">Crea il tuo Profilo</h1>
+            <h1 className="text-xl font-bold text-slate-800">Lega Pronostici</h1>
             <p className="text-xs text-slate-500 mt-1">
-              Scegli il tuo Soprannome univoco. Ti accompagnerà in tutte le tue leghe!
+              Accedi col tuo profilo o registrati per giocare su qualsiasi dispositivo!
             </p>
+          </div>
+
+          {/* SOTTO-TAB LOGIN / REGISTRATI */}
+          <div className="bg-slate-100 p-1 rounded-xl grid grid-cols-2 gap-1 text-center text-xs font-bold">
+            <button
+              onClick={() => setAuthMode('login')}
+              className={`py-2 rounded-lg transition-all ${
+                authMode === 'login' ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-500'
+              }`}
+            >
+              Accedi
+            </button>
+            <button
+              onClick={() => setAuthMode('register')}
+              className={`py-2 rounded-lg transition-all ${
+                authMode === 'register' ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-500'
+              }`}
+            >
+              Nuovo Profilo
+            </button>
           </div>
 
           {dbStatus && (
@@ -918,42 +922,56 @@ export default function Home() {
             </div>
           )}
 
-          <form onSubmit={handleInitialUserRegister} className="space-y-3 text-left">
+          <form onSubmit={handleAuthSubmit} className="space-y-3 text-left">
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">Il tuo Soprannome Univoco:</label>
+              <label className="text-xs font-bold text-slate-700 block mb-1">Username:</label>
               <input
                 type="text"
                 required
                 placeholder="Es. Bomber99"
-                value={inputName}
-                onChange={(e) => setInputName(e.target.value)}
+                value={authUsernameInput}
+                onChange={(e) => setAuthUsernameInput(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">Codice Prima Lega (Invito o Nuova):</label>
+              <label className="text-xs font-bold text-slate-700 block mb-1">Password:</label>
               <input
-                type="text"
-                placeholder="Es. LEGA-8492"
-                value={inputNewCode}
-                onChange={(e) => setInputNewCode(e.target.value.toUpperCase())}
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-mono font-bold tracking-wider text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                type="password"
+                required
+                placeholder="Password segreta"
+                value={authPasswordInput}
+                onChange={(e) => setAuthPasswordInput(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
 
+            {authMode === 'register' && (
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Codice Prima Lega:</label>
+                <input
+                  type="text"
+                  placeholder="Es. LEGA-8492"
+                  value={firstLeagueInput}
+                  onChange={(e) => setFirstLeagueInput(e.target.value.toUpperCase())}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-mono font-bold tracking-wider text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={savingLega}
+              disabled={authenticating}
               className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white font-bold py-3 rounded-xl shadow-md transition-all text-xs flex items-center justify-center space-x-2"
             >
-              {savingLega ? (
+              {authenticating ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Creazione Profilo in corso...</span>
+                  <span>Autenticazione in corso...</span>
                 </>
               ) : (
-                <span>Crea Profilo e Inizia</span>
+                <span>{authMode === 'login' ? 'Accedi al Profilo' : 'Crea Profilo e Inizia'}</span>
               )}
             </button>
           </form>
@@ -1663,13 +1681,13 @@ export default function Home() {
                   </div>
                   <div>
                     <h4 className="font-bold text-sm text-slate-800">{userName}</h4>
-                    <p className="text-[11px] text-slate-400">Utente Registrato</p>
+                    <p className="text-[11px] text-slate-400">Utente Autenticato</p>
                   </div>
                 </div>
                 <button
-                  onClick={handleResetFullProfile}
+                  onClick={handleLogout}
                   className="text-slate-400 hover:text-red-500 p-1.5 rounded-lg transition-all"
-                  title="Reset Profilo"
+                  title="Logout"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
