@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Trophy, Calendar, Users, RefreshCw, Settings, Database, Share2, Copy, Check, UserCheck, LogOut, User } from 'lucide-react';
+import { Trophy, Calendar, Users, RefreshCw, Settings, Database, Share2, Copy, Check, UserCheck, LogOut, User, AlertCircle, CheckCircle } from 'lucide-react';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('matches');
   const [selectedLeague, setSelectedLeague] = useState('SA');
   const [targetSyncLeague, setTargetSyncLeague] = useState('SA');
   const [matchday, setMatchday] = useState(null);
+  const [standingsType, setStandingsType] = useState('matchday');
   const [userPredictions, setUserPredictions] = useState({});
   const [copied, setCopied] = useState(false);
 
@@ -17,7 +18,11 @@ export default function Home() {
   const [inputName, setInputName] = useState('');
   const [inputCode, setInputCode] = useState('');
 
-  // Dati condivisi da Supabase
+  // Stato Debug e Log Supabase
+  const [dbStatus, setDbStatus] = useState(null); // { type: 'success'|'error', text: '' }
+  const [savingLega, setSavingLega] = useState(false);
+
+  // Dati condivisi della Lega da Supabase
   const [allLeaguePredictions, setAllLeaguePredictions] = useState([]);
 
   // Stato API e Rose
@@ -28,10 +33,7 @@ export default function Home() {
   const [syncMessage, setSyncMessage] = useState('');
   const [error, setError] = useState(null);
 
-  // Configurazione Diretta Supabase
-  const baseUrl = 'https://ciklkrqvzaputhoilstl.supabase.co';
-  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpa2xrcXZ6YXB1dGhvaWxzdGwiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc5MDM5Mzc2OSwiZXhwIjoyMTA1OTY5NzY5fQ.gG7bNKaYpX0-qaO6XyBDiizwl1-N0N1pOGIalQMdrGs';
-  
+  // Campionati supportati
   const leagues = [
     { id: 'SA', name: 'Serie A', country: '🇮🇹' },
     { id: 'UNL', name: 'Nations League', country: '🇪🇺' },
@@ -147,16 +149,9 @@ export default function Home() {
     if (!joinedLeagueCode) return;
 
     try {
-      const resPreds = await fetch(
-        `${baseUrl}/rest/v1/predictions?league_code=eq.${joinedLeagueCode}&select=*`,
-        {
-          headers: {
-            apikey: supabaseKey,
-            Authorization: `Bearer ${supabaseKey}`,
-          },
-        }
-      );
-      const dataPreds = await resPreds.json();
+      const res = await fetch(`/api/predictions?league_code=${joinedLeagueCode}`);
+      const dataPreds = await res.json();
+
       if (Array.isArray(dataPreds)) {
         setAllLeaguePredictions(dataPreds);
 
@@ -174,9 +169,11 @@ export default function Home() {
             }
           });
         setUserPredictions(myPreds);
+      } else if (dataPreds.error) {
+        setDbStatus({ type: 'error', text: `Errore Lettura DB: ${dataPreds.error}` });
       }
     } catch (e) {
-      console.error('Errore caricamento Supabase:', e);
+      setDbStatus({ type: 'error', text: `Errore Chiamata Lettura: ${e.message}` });
     }
   };
 
@@ -185,6 +182,62 @@ export default function Home() {
       fetchLeagueData();
     }
   }, [userName, joinedLeagueCode, matches]);
+
+  // TEST CREAZIONE E SALVATAGGIO LEGA
+  const handleSaveAndJoinLeague = async (e) => {
+    e.preventDefault();
+    if (!inputName.trim()) return;
+
+    setSavingLega(true);
+    setDbStatus(null);
+
+    const finalCode = inputCode.trim() ? inputCode.trim().toUpperCase() : 'LEGA-8492';
+    const nick = inputName.trim();
+
+    try {
+      const res = await fetch('/api/predictions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          league_code: finalCode,
+          nickname: nick,
+          match_id: 'JOIN_ENTRY',
+          home_score: null,
+          away_score: null,
+          outcome: null,
+          scorer: null
+        }),
+      });
+
+      const result = await res.json();
+
+      if (res.ok && result.success) {
+        setDbStatus({ type: 'success', text: `Lega "${finalCode}" creata/collegata con successo su Supabase!` });
+        
+        localStorage.setItem('user_nickname', nick);
+        localStorage.setItem('user_league_code', finalCode);
+
+        setUserName(nick);
+        setJoinedLeagueCode(finalCode);
+
+        fetchLeagueData();
+      } else {
+        setDbStatus({ type: 'error', text: `Errore Scrittura Supabase: ${result.error || JSON.stringify(result)}` });
+      }
+    } catch (err) {
+      setDbStatus({ type: 'error', text: `Errore Rete/Client: ${err.message}` });
+    } finally {
+      setSavingLega(false);
+    }
+  };
+
+  const handleLeaveLeague = () => {
+    localStorage.removeItem('user_nickname');
+    localStorage.removeItem('user_league_code');
+    setUserName('');
+    setJoinedLeagueCode('');
+    setDbStatus(null);
+  };
 
   // Salva un pronostico su Supabase
   const savePredictionToSupabase = async (matchId, predData) => {
@@ -201,20 +254,21 @@ export default function Home() {
         scorer: predData.scorer || null,
       };
 
-      await fetch(`${baseUrl}/rest/v1/predictions`, {
+      const res = await fetch('/api/predictions', {
         method: 'POST',
-        headers: {
-          apikey: supabaseKey,
-          Authorization: `Bearer ${supabaseKey}`,
-          'Content-Type': 'application/json',
-          Prefer: 'resolution=merge-duplicates',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
-      fetchLeagueData();
+      const resJson = await res.json();
+      if (!res.ok) {
+        setDbStatus({ type: 'error', text: `Errore Salvataggio Pronostico: ${resJson.error}` });
+      } else {
+        setDbStatus({ type: 'success', text: `Pronostico salvato con successo!` });
+        fetchLeagueData();
+      }
     } catch (e) {
-      console.error('Errore salvataggio pronostico:', e);
+      setDbStatus({ type: 'error', text: `Errore Connessione: ${e.message}` });
     }
   };
 
@@ -264,49 +318,6 @@ export default function Home() {
     } finally {
       setSyncingSquads(false);
     }
-  };
-
-  // Ingresso in Lega
-  const handleJoinLeague = async (e) => {
-    e.preventDefault();
-    if (!inputName.trim()) return;
-
-    const finalCode = inputCode.trim() ? inputCode.trim().toUpperCase() : 'LEGA-8492';
-    const nick = inputName.trim();
-
-    localStorage.setItem('user_nickname', nick);
-    localStorage.setItem('user_league_code', finalCode);
-
-    setUserName(nick);
-    setJoinedLeagueCode(finalCode);
-
-    // Salva record di registrazione su Supabase
-    try {
-      await fetch(`${baseUrl}/rest/v1/predictions`, {
-        method: 'POST',
-        headers: {
-          apikey: supabaseKey,
-          Authorization: `Bearer ${supabaseKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          league_code: finalCode,
-          nickname: nick,
-          match_id: 'JOIN_ENTRY'
-        }),
-      });
-    } catch (e) {
-      console.error(e);
-    }
-
-    fetchLeagueData();
-  };
-
-  const handleLeaveLeague = () => {
-    localStorage.removeItem('user_nickname');
-    localStorage.removeItem('user_league_code');
-    setUserName('');
-    setJoinedLeagueCode('');
   };
 
   // Condivisione
@@ -483,19 +494,32 @@ export default function Home() {
           </div>
 
           <div>
-            <h1 className="text-xl font-bold text-slate-800">Lega Pronostici</h1>
+            <h1 className="text-xl font-bold text-slate-800">Crea o Entra in Lega</h1>
             <p className="text-xs text-slate-500 mt-1">
-              Entra nella lega dei tuoi amici senza bisogno di registrarti!
+              Inserisci il nome e il codice per scrivere i dati su Supabase
             </p>
           </div>
 
-          <form onSubmit={handleJoinLeague} className="space-y-3 text-left">
+          {dbStatus && (
+            <div className={`p-3 rounded-xl text-left text-xs font-semibold flex items-start space-x-2 border ${
+              dbStatus.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-700'
+            }`}>
+              {dbStatus.type === 'success' ? (
+                <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+              ) : (
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              )}
+              <span className="break-words">{dbStatus.text}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSaveAndJoinLeague} className="space-y-3 text-left">
             <div>
               <label className="text-xs font-bold text-slate-700 block mb-1">Il tuo Soprannome:</label>
               <input
                 type="text"
                 required
-                placeholder="Es. Bomber99"
+                placeholder="Es. Nicola"
                 value={inputName}
                 onChange={(e) => setInputName(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -503,10 +527,10 @@ export default function Home() {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">Codice Invito Lega:</label>
+              <label className="text-xs font-bold text-slate-700 block mb-1">Codice Lega da creare o unirti:</label>
               <input
                 type="text"
-                placeholder="Es. LEGA-8492"
+                placeholder="Es. LEGA-TEST99"
                 value={inputCode}
                 onChange={(e) => setInputCode(e.target.value.toUpperCase())}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-mono font-bold tracking-wider text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -515,9 +539,17 @@ export default function Home() {
 
             <button
               type="submit"
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-md transition-all text-xs"
+              disabled={savingLega}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white font-bold py-3 rounded-xl shadow-md transition-all text-xs flex items-center justify-center space-x-2"
             >
-              Entra in Gioco
+              {savingLega ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Salvataggio su Supabase in corso...</span>
+                </>
+              ) : (
+                <span>Salva e Crea Lega</span>
+              )}
             </button>
           </form>
         </div>
@@ -545,6 +577,18 @@ export default function Home() {
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </header>
+
+      {dbStatus && (
+        <div className={`m-3 p-3 rounded-xl text-xs font-semibold flex items-center justify-between border ${
+          dbStatus.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-700'
+        }`}>
+          <div className="flex items-center space-x-2">
+            {dbStatus.type === 'success' ? <CheckCircle className="w-4 h-4 text-emerald-600" /> : <AlertCircle className="w-4 h-4 text-red-600" />}
+            <span>{dbStatus.text}</span>
+          </div>
+          <button onClick={() => setDbStatus(null)} className="text-slate-400 hover:text-slate-600">✕</button>
+        </div>
+      )}
 
       {activeTab === 'matches' && (
         <div className="p-3 bg-white border-b border-slate-200 flex space-x-2 overflow-x-auto shadow-sm">
@@ -761,7 +805,6 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Partecipanti Unici Estratti dai Pronostici Salvati */}
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
               <h3 className="font-bold text-sm text-slate-800">Partecipanti alla Lega ({leagueMembersList.length})</h3>
               <div className="divide-y divide-slate-100">
