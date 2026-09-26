@@ -3,26 +3,31 @@ import { NextResponse } from 'next/server';
 const baseUrl = 'https://ciklkrqvzaputhoilstl.supabase.co';
 const supabaseKey = 'sb_publishable_XDgb0Vbh_uuKyB9nc1SZCA__xtJcXOK';
 
-// GET: Legge i pronostici della lega
+// GET: Legge i pronostici di una specifica lega oppure di un utente
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const leagueCode = searchParams.get('league_code');
-
-  if (!leagueCode) {
-    return NextResponse.json({ error: 'Codice lega mancante' }, { status: 400 });
-  }
+  const nickname = searchParams.get('nickname');
 
   try {
-    const res = await fetch(
-      `${baseUrl}/rest/v1/predictions?league_code=eq.${leagueCode}&select=*`,
-      {
-        headers: {
-          apikey: supabaseKey,
-          Authorization: `Bearer ${supabaseKey}`,
-        },
-        cache: 'no-store',
-      }
-    );
+    let url = `${baseUrl}/rest/v1/predictions?select=*`;
+    
+    if (leagueCode) {
+      url += `&league_code=eq.${encodeURIComponent(leagueCode)}`;
+    } else if (nickname) {
+      url += `&nickname=eq.${encodeURIComponent(nickname)}`;
+    } else {
+      return NextResponse.json({ error: 'Parametro mancante (league_code o nickname)' }, { status: 400 });
+    }
+
+    const res = await fetch(url, {
+      headers: {
+        apikey: supabaseKey,
+        Authorization: `Bearer ${supabaseKey}`,
+      },
+      cache: 'no-store',
+    });
+
     const data = await res.json();
     return NextResponse.json(data);
   } catch (error) {
@@ -30,7 +35,7 @@ export async function GET(request) {
   }
 }
 
-// POST: Upsert (Salva o Aggiorna) un array o singolo pronostico su Supabase
+// POST: Salva o aggiorna un pronostico (o array) su Supabase con Upsert
 export async function POST(request) {
   try {
     const body = await request.json();
