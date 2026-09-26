@@ -8,7 +8,6 @@ export default function Home() {
   const [selectedLeague, setSelectedLeague] = useState('SA');
   const [targetSyncLeague, setTargetSyncLeague] = useState('SA');
   const [matchday, setMatchday] = useState(null);
-  const [standingsType, setStandingsType] = useState('matchday');
   const [userPredictions, setUserPredictions] = useState({});
   const [copied, setCopied] = useState(false);
 
@@ -20,7 +19,6 @@ export default function Home() {
 
   // Dati condivisi della Lega da Supabase
   const [allLeaguePredictions, setAllLeaguePredictions] = useState([]);
-  const [leagueMembers, setLeagueMembers] = useState([]);
 
   // Stato API e Rose
   const [matches, setMatches] = useState([]);
@@ -30,12 +28,11 @@ export default function Home() {
   const [syncMessage, setSyncMessage] = useState('');
   const [error, setError] = useState(null);
 
-  // Configurazione Supabase (Supporta variabili con o senza NEXT_PUBLIC_)
+  // Configurazione Supabase
   const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || 'https://ciklkrqvzaputhoilstl.supabase.co';
   const baseUrl = rawUrl.replace(/\/rest\/v1\/?$/, '');
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.ANON_KEY;
 
-  // Campionati supportati
   const leagues = [
     { id: 'SA', name: 'Serie A', country: '🇮🇹' },
     { id: 'UNL', name: 'Nations League', country: '🇪🇺' },
@@ -131,7 +128,6 @@ export default function Home() {
     if (savedName) setUserName(savedName);
     if (savedLeague) setJoinedLeagueCode(savedLeague);
 
-    // Carica rose salvate nel localStorage per i club
     const loadedSquads = {};
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -147,27 +143,11 @@ export default function Home() {
     setTeamsSquads(loadedSquads);
   }, []);
 
-  // Carica i Membri e i Pronostici della Lega da Supabase
+  // Carica i Pronostici della Lega da Supabase
   const fetchLeagueData = async () => {
     if (!joinedLeagueCode || !supabaseKey) return;
 
     try {
-      // 1. Carica Membri della Lega
-      const resMembers = await fetch(
-        `${baseUrl}/rest/v1/league_members?league_code=eq.${joinedLeagueCode}&select=*`,
-        {
-          headers: {
-            apikey: supabaseKey,
-            Authorization: `Bearer ${supabaseKey}`,
-          },
-        }
-      );
-      const dataMembers = await resMembers.json();
-      if (Array.isArray(dataMembers)) {
-        setLeagueMembers(dataMembers);
-      }
-
-      // 2. Carica Pronostici di tutti
       const resPreds = await fetch(
         `${baseUrl}/rest/v1/predictions?league_code=eq.${joinedLeagueCode}&select=*`,
         {
@@ -181,17 +161,18 @@ export default function Home() {
       if (Array.isArray(dataPreds)) {
         setAllLeaguePredictions(dataPreds);
 
-        // Estrai pronostici dell'utente attivo
         const myPreds = {};
         dataPreds
           .filter((item) => item.nickname === userName)
           .forEach((item) => {
-            myPreds[item.match_id] = {
-              homeScore: item.home_score ?? '',
-              awayScore: item.away_score ?? '',
-              outcome: item.outcome ?? '',
-              scorer: item.scorer ?? '',
-            };
+            if (item.match_id !== 'JOIN_ENTRY') {
+              myPreds[item.match_id] = {
+                homeScore: item.home_score ?? '',
+                awayScore: item.away_score ?? '',
+                outcome: item.outcome ?? '',
+                scorer: item.scorer ?? '',
+              };
+            }
           });
         setUserPredictions(myPreds);
       }
@@ -205,28 +186,6 @@ export default function Home() {
       fetchLeagueData();
     }
   }, [userName, joinedLeagueCode, matches]);
-
-  // Registra un nuovo membro della lega su Supabase
-  const registerMemberOnSupabase = async (nickname, code) => {
-    if (!supabaseKey) return;
-    try {
-      await fetch(`${baseUrl}/rest/v1/league_members`, {
-        method: 'POST',
-        headers: {
-          apikey: supabaseKey,
-          Authorization: `Bearer ${supabaseKey}`,
-          'Content-Type': 'application/json',
-          Prefer: 'ignore-duplicates',
-        },
-        body: JSON.stringify({
-          league_code: code,
-          nickname: nickname,
-        }),
-      });
-    } catch (e) {
-      console.error('Errore registrazione membro:', e);
-    }
-  };
 
   // Salva un pronostico su Supabase
   const savePredictionToSupabase = async (matchId, predData) => {
@@ -322,7 +281,27 @@ export default function Home() {
     setUserName(nick);
     setJoinedLeagueCode(finalCode);
 
-    await registerMemberOnSupabase(nick, finalCode);
+    // Salva record di registrazione
+    if (supabaseKey) {
+      try {
+        await fetch(`${baseUrl}/rest/v1/predictions`, {
+          method: 'POST',
+          headers: {
+            apikey: supabaseKey,
+            Authorization: `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            league_code: finalCode,
+            nickname: nick,
+            match_id: 'JOIN_ENTRY'
+          }),
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
     fetchLeagueData();
   };
 
@@ -349,7 +328,7 @@ export default function Home() {
     window.open(`https://wa.me/?text=${message}`, '_blank');
   };
 
-  // Carica Partite (API Live o Nations League)
+  // Carica Partite
   const fetchMatches = async (forcedMatchday = null) => {
     setLoading(true);
     setError(null);
@@ -400,15 +379,20 @@ export default function Home() {
     fetchMatches(null);
   }, [selectedLeague]);
 
+  // ESTRAGGO PARTECPANTI UNICI
+  const leagueMembersList = Array.from(new Set(allLeaguePredictions.map(p => p.nickname)));
+
   // CALCOLO CLASSIFICA UNIFICATA DI GRUPPO
   const calculateGroupLeaderboard = () => {
     const userScores = {};
 
-    leagueMembers.forEach((member) => {
-      userScores[member.nickname] = { name: member.nickname, matchdayPts: 0, exactScores: 0 };
+    leagueMembersList.forEach((nick) => {
+      userScores[nick] = { name: nick, matchdayPts: 0, exactScores: 0 };
     });
 
     allLeaguePredictions.forEach((pred) => {
+      if (pred.match_id === 'JOIN_ENTRY') return;
+
       if (!userScores[pred.nickname]) {
         userScores[pred.nickname] = { name: pred.nickname, matchdayPts: 0, exactScores: 0 };
       }
@@ -780,15 +764,15 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Elenco Partecipanti Iscritti */}
+            {/* Partecipanti Unici Estratti dai Pronostici Salvati */}
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
-              <h3 className="font-bold text-sm text-slate-800">Partecipanti alla Lega ({leagueMembers.length})</h3>
+              <h3 className="font-bold text-sm text-slate-800">Partecipanti alla Lega ({leagueMembersList.length})</h3>
               <div className="divide-y divide-slate-100">
-                {leagueMembers.map((m) => (
-                  <div key={m.nickname} className="py-2 flex items-center space-x-2 text-xs">
+                {leagueMembersList.map((nick) => (
+                  <div key={nick} className="py-2 flex items-center space-x-2 text-xs">
                     <User className="w-4 h-4 text-emerald-600" />
-                    <span className="font-semibold text-slate-700">{m.nickname}</span>
-                    {m.nickname === userName && <span className="text-[10px] text-emerald-600 font-bold">(Tu)</span>}
+                    <span className="font-semibold text-slate-700">{nick}</span>
+                    {nick === userName && <span className="text-[10px] text-emerald-600 font-bold">(Tu)</span>}
                   </div>
                 ))}
               </div>
@@ -869,7 +853,6 @@ export default function Home() {
         )}
       </main>
 
-      {/* Navigation Bar in basso */}
       <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur border-t border-slate-200 grid grid-cols-4 py-2 z-50 shadow-lg">
         <button onClick={() => setActiveTab('matches')} className={`flex flex-col items-center space-y-1 ${activeTab === 'matches' ? 'text-emerald-600 font-bold' : 'text-slate-400'}`}>
           <Calendar className="w-5 h-5" />
