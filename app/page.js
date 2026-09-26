@@ -5,13 +5,13 @@ import { Trophy, Calendar, Users, RefreshCw, Settings, Database, Share2, Copy, C
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('matches');
-  const [selectedLeague, setSelectedLeague] = useState('SA');
+  const [selectedLeague, setSelectedLeague] = useState('UNL');
   const [targetSyncLeague, setTargetSyncLeague] = useState('SA');
   const [matchday, setMatchday] = useState(null);
   const [userPredictions, setUserPredictions] = useState({});
   const [copied, setCopied] = useState(false);
 
-  // Stato Scommessa Attiva (Default: bloccata finché non si clicca Pronostica)
+  // Stato Scommessa Attiva
   const [isEditingPredictions, setIsEditingPredictions] = useState(false);
 
   // Profilo Utente Univoco & Leghe Iscritte
@@ -24,7 +24,7 @@ export default function Home() {
   
   const [showAddLeagueModal, setShowAddLeagueModal] = useState(false);
 
-  // Dettaglio Utente Selezionato per consultazione schedine
+  // Dettaglio Utente Selezionato
   const [selectedMemberDetail, setSelectedMemberDetail] = useState(null);
 
   // Stato Debug e Log
@@ -44,8 +44,8 @@ export default function Home() {
 
   // Campionati supportati
   const leagues = [
-    { id: 'SA', name: 'Serie A', country: '🇮🇹' },
     { id: 'UNL', name: 'Nations League', country: '🇪🇺' },
+    { id: 'SA', name: 'Serie A', country: '🇮🇹' },
     { id: 'PL', name: 'Premier League', country: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
     { id: 'PD', name: 'La Liga', country: '🇪🇸' },
     { id: 'FL1', name: 'Ligue 1', country: '🇫🇷' },
@@ -53,78 +53,122 @@ export default function Home() {
     { id: 'EL', name: 'Europa League', country: '🇪🇺' },
   ];
 
-  // Partite Nations League
+  // NUOVE PARTITE NATIONS LEAGUE DI OGGI
   const nationsLeagueMatches = [
     {
-      id: 'unl-1',
-      homeTeam: { name: 'Italia', shortName: 'Italia', id: 'ITA' },
-      awayTeam: { name: 'Belgio', shortName: 'Belgio', id: 'BEL' },
-      utcDate: '2026-09-25T20:45:00Z',
-      status: 'FINISHED',
-      score: { fullTime: { home: 2, away: 2 } },
-      goals: [{ scorer: { name: 'Moise Kean' } }, { scorer: { name: 'Giacomo Raspadori' } }, { scorer: { name: 'Kevin De Bruyne' } }, { scorer: { name: 'Romelu Lukaku' } }]
+      id: 'unl-2026-01',
+      homeTeam: { name: 'Slovenia', shortName: 'Slovenia', id: 'SVN' },
+      awayTeam: { name: 'Scozia', shortName: 'Scozia', id: 'SCO' },
+      utcDate: '2026-09-26T13:00:00Z', // 15:00 CEST
+      status: 'TIMED',
+      score: { fullTime: { home: null, away: null } },
+      goals: []
     },
     {
-      id: 'unl-2',
-      homeTeam: { name: 'Turchia', shortName: 'Turchia', id: 'TUR' },
-      awayTeam: { name: 'Francia', shortName: 'Francia', id: 'FRA' },
-      utcDate: '2026-09-25T20:45:00Z',
-      status: 'FINISHED',
-      score: { fullTime: { home: 1, away: 2 } },
-      goals: [{ scorer: { name: 'Arda Güler' } }, { scorer: { name: 'Kylian Mbappé' } }, { scorer: { name: 'Marcus Thuram' } }]
+      id: 'unl-2026-02',
+      homeTeam: { name: 'Fær Øer', shortName: 'Fær Øer', id: 'FRO' },
+      awayTeam: { name: 'Kazakistan', shortName: 'Kazakistan', id: 'KAZ' },
+      utcDate: '2026-09-26T16:00:00Z', // 18:00 CEST
+      status: 'TIMED',
+      score: { fullTime: { home: null, away: null } },
+      goals: []
     },
     {
-      id: 'unl-3',
-      homeTeam: { name: 'Ungheria', shortName: 'Ungheria', id: 'HUN' },
-      awayTeam: { name: 'Ucraina', shortName: 'Ucraina', id: 'UKR' },
-      utcDate: '2026-09-25T20:45:00Z',
-      status: 'FINISHED',
-      score: { fullTime: { home: 1, away: 1 } },
-      goals: [{ scorer: { name: 'Dominik Szoboszlai' } }, { scorer: { name: 'Artem Dovbyk' } }]
+      id: 'unl-2026-03',
+      homeTeam: { name: 'San Marino', shortName: 'San Marino', id: 'SMR' },
+      awayTeam: { name: 'Finlandia', shortName: 'Finlandia', id: 'FIN' },
+      utcDate: '2026-09-26T16:00:00Z', // 18:00 CEST
+      status: 'TIMED',
+      score: { fullTime: { home: null, away: null } },
+      goals: []
     },
     {
-      id: 'unl-4',
-      homeTeam: { name: 'Svezia', shortName: 'Svezia', id: 'SWE' },
-      awayTeam: { name: 'Romania', shortName: 'Romania', id: 'ROU' },
-      utcDate: '2026-09-25T20:45:00Z',
-      status: 'FINISHED',
-      score: { fullTime: { home: 3, away: 0 } },
-      goals: [{ scorer: { name: 'Viktor Gyökeres' } }, { scorer: { name: 'Alexander Isak' } }]
+      id: 'unl-2026-04',
+      homeTeam: { name: 'Islanda', shortName: 'Islanda', id: 'ISL' },
+      awayTeam: { name: 'Estonia', shortName: 'Estonia', id: 'EST' },
+      utcDate: '2026-09-26T16:00:00Z', // 18:00 CEST
+      status: 'TIMED',
+      score: { fullTime: { home: null, away: null } },
+      goals: []
     },
     {
-      id: 'unl-5',
-      homeTeam: { name: 'Polonia', shortName: 'Polonia', id: 'POL' },
-      awayTeam: { name: 'Bosnia', shortName: 'Bosnia', id: 'BIH' },
-      utcDate: '2026-09-25T20:45:00Z',
-      status: 'FINISHED',
-      score: { fullTime: { home: 2, away: 0 } },
-      goals: [{ scorer: { name: 'Robert Lewandowski' } }]
+      id: 'unl-2026-05',
+      homeTeam: { name: 'Bulgaria', shortName: 'Bulgaria', id: 'BUL' },
+      awayTeam: { name: 'Lussemburgo', shortName: 'Lussemburgo', id: 'LUX' },
+      utcDate: '2026-09-26T16:00:00Z', // 18:00 CEST
+      status: 'TIMED',
+      score: { fullTime: { home: null, away: null } },
+      goals: []
     },
     {
-      id: 'unl-6',
-      homeTeam: { name: 'Georgia', shortName: 'Georgia', id: 'GEO' },
-      awayTeam: { name: 'Irlanda Nord', shortName: 'Irlanda Nord', id: 'NIR' },
-      utcDate: '2026-09-25T18:00:00Z',
-      status: 'FINISHED',
-      score: { fullTime: { home: 1, away: 0 } },
-      goals: [{ scorer: { name: 'Khvicha Kvaratskhelia' } }]
+      id: 'unl-2026-06',
+      homeTeam: { name: 'Repubblica Ceca', shortName: 'Rep. Ceca', id: 'CZE' },
+      awayTeam: { name: 'Croazia', shortName: 'Croazia', id: 'CRO' },
+      utcDate: '2026-09-26T18:45:00Z', // 20:45 CEST
+      status: 'TIMED',
+      score: { fullTime: { home: null, away: null } },
+      goals: []
+    },
+    {
+      id: 'unl-2026-07',
+      homeTeam: { name: 'Macedonia del Nord', shortName: 'Macedonia N.', id: 'MKD' },
+      awayTeam: { name: 'Svizzera', shortName: 'Svizzera', id: 'SUI' },
+      utcDate: '2026-09-26T18:45:00Z', // 20:45 CEST
+      status: 'TIMED',
+      score: { fullTime: { home: null, away: null } },
+      goals: []
+    },
+    {
+      id: 'unl-2026-08',
+      homeTeam: { name: 'Inghilterra', shortName: 'Inghilterra', id: 'ENG' },
+      awayTeam: { name: 'Spagna', shortName: 'Spagna', id: 'ESP' },
+      utcDate: '2026-09-26T18:45:00Z', // 20:45 CEST
+      status: 'TIMED',
+      score: { fullTime: { home: null, away: null } },
+      goals: []
+    },
+    {
+      id: 'unl-2026-09',
+      homeTeam: { name: 'Slovacchia', shortName: 'Slovacchia', id: 'SVK' },
+      awayTeam: { name: 'Moldavia', shortName: 'Moldavia', id: 'MDA' },
+      utcDate: '2026-09-26T18:45:00Z', // 20:45 CEST
+      status: 'TIMED',
+      score: { fullTime: { home: null, away: null } },
+      goals: []
+    },
+    {
+      id: 'unl-2026-10',
+      homeTeam: { name: 'Albania', shortName: 'Albania', id: 'ALB' },
+      awayTeam: { name: 'Bielorussia', shortName: 'Bielorussia', id: 'BLR' },
+      utcDate: '2026-09-26T18:45:00Z', // 20:45 CEST
+      status: 'TIMED',
+      score: { fullTime: { home: null, away: null } },
+      goals: []
     }
   ];
 
-  // Convocati Nazionali
+  // Convocati Nazionali per il Datalist Marcatori
   const nationalSquads = {
-    ITA: ['Moise Kean', 'Gianluca Scamacca', 'Giacomo Raspadori', 'Francesco Pio Esposito', 'Daniel Maldini', 'Nicolò Zaniolo', 'Nicolò Barella', 'Davide Frattesi', 'Sandro Tonali', 'Riccardo Calafiori', 'Alessandro Bastoni', 'Giovanni Di Lorenzo'],
-    BEL: ['Romelu Lukaku', 'Loïs Openda', 'Kevin De Bruyne', 'Jeremy Doku', 'Leandro Trossard', 'Youri Tielemans', 'Amadou Onana', 'Timothy Castagne'],
-    TUR: ['Arda Güler', 'Barış Alper Yılmaz', 'Kenan Yıldız', 'Hakan Çalhanoğlu', 'Kerem Aktürkoğlu', 'Cenk Tosun', 'Orkun Kökçü'],
-    FRA: ['Kylian Mbappé', 'Marcus Thuram', 'Randal Kolo Muani', 'Antoine Griezmann', 'Ousmane Dembélé', 'Bradley Barcola', 'Eduardo Camavinga'],
-    HUN: ['Dominik Szoboszlai', 'Barnabás Varga', 'Roland Sallai', 'András Schäfer'],
-    UKR: ['Artem Dovbyk', 'Roman Yaremchuk', 'Mykhailo Mudryk', 'Viktor Tsygankov', 'Heorhiy Sudakov', 'Oleksandr Zinchenko'],
-    SWE: ['Viktor Gyökeres', 'Alexander Isak', 'Dejan Kulusevski', 'Anthony Elanga', 'Emil Forsberg'],
-    ROU: ['Denis Drăguș', 'George Pușcaș', 'Dennis Man', 'Valentin Mihăilă', 'Răzvan Marin', 'Nicolae Stanciu'],
-    POL: ['Robert Lewandowski', 'Karol Świderski', 'Krzysztof Piątek', 'Piotr Zieliński', 'Sebastian Szymański'],
-    BIH: ['Edin Džeko', 'Ermedin Demirović', 'Rade Krunić', 'Benjamin Tahirović'],
-    GEO: ['Khvicha Kvaratskhelia', 'Georges Mikautadze', 'Zuriko Davitashvili'],
-    NIR: ['Dion Charles', 'Josh Magennis', 'Isaac Price', 'Shea Charles']
+    SVN: ['Benjamin Šeško', 'Andraž Šporar', 'Jan Oblak', 'Petar Stojanović', 'Timi Max Elšnik'],
+    SCO: ['Scott McTominay', 'John McGinn', 'Lyndon Dykes', 'Che Adams', 'Andy Robertson'],
+    FRO: ['Klámint Olsen', 'Jóannes Bjartalíð', 'Sølvi Vatnhamar', 'Meinhard Olsen'],
+    KAZ: ['Baktiyar Zaynutdinov', 'Abat Aimbetov', 'Islam Chesnokov', 'Ramazan Orazov'],
+    SMR: ['Filippo Berardi', 'Nicola Nanni', 'Matteo Vitaioli', 'Lorenzo Lazzari'],
+    FIN: ['Teemu Pukki', 'Joel Pohjanpalo', 'Glen Kamara', 'Benjamin Källman'],
+    ISL: ['Albert Guðmundsson', 'Orri Óskarsson', 'Hákon Arnar Haraldsson', 'Ísak Bergmann Jóhannesson'],
+    EST: ['Henri Anier', 'Mattias Käit', 'Rauno Sappinen', 'Oliver Jürgens'],
+    BUL: ['Kiril Despodov', 'Spas Delev', 'Filip Krastev', 'Aleksandar Kolev'],
+    LUX: ['Gerson Rodrigues', 'Danel Sinani', 'Leandro Barreiro', 'Edvin Muratović'],
+    CZE: ['Patrik Schick', 'Tomas Soucek', 'Adam Hlozek', 'Vaclav Cerny'],
+    CRO: ['Andrej Kramarić', 'Luka Modrić', 'Ante Budimir', 'Ivan Perišić', 'Mateo Kovačić'],
+    MKD: ['Eljif Elmas', 'Bojan Miovski', 'Aleksandar Trajkovski', 'Enis Bardhi'],
+    SUI: ['Breel Embolo', 'Granit Xhaka', 'Zeki Amdouni', 'Ruben Vargas', 'Dan Ndoye'],
+    ENG: ['Harry Kane', 'Jude Bellingham', 'Bukayo Saka', 'Phil Foden', 'Cole Palmer', 'Ollie Watkins'],
+    ESP: ['Lamine Yamal', 'Nico Williams', 'Álvaro Morata', 'Dani Olmo', 'Pedri', 'Rodri'],
+    SVK: ['Róbert Boženík', 'Lukas Haraslin', 'Ondrej Duda', 'Tomas Suslov'],
+    MDA: ['Ion Nicolaescu', 'Vitalie Damașcan', 'Mihail Caimacov', 'Artur Ioniță'],
+    ALB: ['Armando Broja', 'Rey Manaj', 'Jasir Asani', 'Nedim Bajrami', 'Kristjan Asllani'],
+    BLR: ['Max Ebong', 'Vitaly Lisakovich', 'Vladislav Morozov', 'Valery Gromyko']
   };
 
   // Caricamento Iniziale Profilo Utente & Leghe
@@ -338,7 +382,6 @@ export default function Home() {
     if (!matches || matches.length === 0) return false;
     const now = new Date();
 
-    // Se c'è almeno una partita FINISHED o TIMED passata rispetto all'ora attuale
     return matches.some((m) => {
       if (m.status === 'FINISHED' || m.status === 'IN_PLAY' || m.status === 'PAUSED') return true;
       if (m.utcDate) {
@@ -510,13 +553,11 @@ export default function Home() {
       let targetMatchday = forcedMatchday;
 
       if (!targetMatchday) {
-        // Scarichiamo tutto il calendario della competizione per trovare la prima giornata futura/in corso
         const compRes = await fetch(`/api/football?endpoint=competitions/${selectedLeague}/matches`);
         const compData = await compRes.json();
 
         if (compData.matches && compData.matches.length > 0) {
           const now = new Date();
-          // Troviamo la prima partita in programma nel futuro o in corso
           const upcomingMatch = compData.matches.find((m) => {
             const mDate = new Date(m.utcDate);
             return mDate >= now || m.status === 'TIMED' || m.status === 'IN_PLAY';
@@ -525,7 +566,6 @@ export default function Home() {
           if (upcomingMatch && upcomingMatch.matchday) {
             targetMatchday = upcomingMatch.matchday;
           } else {
-            // Se tutte le partite sono concluse, prendiamo l'ultima giornata
             const lastMatch = compData.matches[compData.matches.length - 1];
             targetMatchday = lastMatch?.matchday || 1;
           }
@@ -536,7 +576,6 @@ export default function Home() {
         setMatchday(targetMatchday);
       }
 
-      // Ora scarichiamo le partite per la giornata identificata
       const res = await fetch(
         `/api/football?endpoint=competitions/${selectedLeague}/matches&matchday=${targetMatchday}`
       );
@@ -658,7 +697,7 @@ export default function Home() {
 
   const matchdayStarted = isMatchdayStartedOrFinished();
 
-  // PRIMA REGISTRAZIONE UTENTE (Se non esiste un nome salvato nel dispositivo)
+  // PRIMA REGISTRAZIONE UTENTE
   if (!userName) {
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4 text-slate-800 font-sans">
@@ -786,7 +825,7 @@ export default function Home() {
           <div className="space-y-4">
             <div className="flex justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-slate-200">
               <span className="text-xs font-bold text-slate-700">
-                {selectedLeague === 'UNL' ? 'Nations League' : matchday ? `Giornata ${matchday}` : 'Caricamento...'}
+                {selectedLeague === 'UNL' ? 'Nations League (Oggi)' : matchday ? `Giornata ${matchday}` : 'Caricamento...'}
               </span>
 
               <div className="flex space-x-1.5 items-center">
@@ -807,7 +846,6 @@ export default function Home() {
                   </>
                 )}
 
-                {/* PULSANTE "PRONOSTICA" O STATO BLOCCATO */}
                 {matchdayStarted ? (
                   <div className="bg-slate-100 text-slate-500 border border-slate-200 px-2.5 py-1.5 rounded-lg text-[11px] font-bold flex items-center space-x-1">
                     <Lock className="w-3 h-3 text-red-500" />
@@ -948,7 +986,6 @@ export default function Home() {
                 );
               })}
 
-            {/* TASTO "SALVA TUTTI I PRONOSTICI" VISIBILE SOLO IN MODALITÀ EDITING */}
             {!loading && matches.length > 0 && isEditingPredictions && !matchdayStarted && (
               <div className="pt-2">
                 <button
@@ -1017,7 +1054,6 @@ export default function Home() {
         {/* TAB 3: LEGA E MULTI-LEGA */}
         {activeTab === 'league' && (
           <div className="space-y-4">
-            {/* PROFILO UTENTE FISSO E SELETTORE LEGHE */}
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div className="flex items-center space-x-3">
@@ -1038,7 +1074,6 @@ export default function Home() {
                 </button>
               </div>
 
-              {/* LISTA E SELEZIONE DELLE LEGHE ISCRITTE */}
               <div className="space-y-2 pt-1">
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-bold text-slate-700 flex items-center space-x-1">
@@ -1073,7 +1108,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* MODALE PER AGGIUNGERE NUOVA LEGA */}
             {showAddLeagueModal && (
               <div className="bg-emerald-50/90 border border-emerald-200 p-4 rounded-2xl space-y-3">
                 <h4 className="font-bold text-xs text-emerald-900">Unisciti o Crea una Nuova Lega</h4>
@@ -1097,7 +1131,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* VISTA DETTAGLIO SCHEDINA UTENTE SELEZIONATO */}
             {selectedMemberDetail ? (
               <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
                 <div className="flex justify-between items-center border-b border-slate-100 pb-2">
@@ -1134,7 +1167,6 @@ export default function Home() {
                 </div>
               </div>
             ) : (
-              /* ELENCO PARTECPANTI DELLA LEGA ATTIVA */
               <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
                 <h3 className="font-bold text-sm text-slate-800">Membri in {activeLeagueCode} ({leagueMembersList.length})</h3>
                 <p className="text-[11px] text-slate-400">Clicca su un partecipante per consultare i suoi pronostici.</p>
