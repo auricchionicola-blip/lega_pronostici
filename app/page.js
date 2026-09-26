@@ -1,14 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Trophy, Calendar, Users, RefreshCw, Settings, Database, Share2, Copy, Check, UserCheck, LogOut, User, AlertCircle, CheckCircle } from 'lucide-react';
+import { Trophy, Calendar, Users, RefreshCw, Settings, Database, Share2, Copy, Check, UserCheck, LogOut, User, AlertCircle, CheckCircle, Save, Play, ChevronRight, Eye } from 'lucide-react';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('matches');
   const [selectedLeague, setSelectedLeague] = useState('SA');
   const [targetSyncLeague, setTargetSyncLeague] = useState('SA');
   const [matchday, setMatchday] = useState(null);
-  const [standingsType, setStandingsType] = useState('matchday');
   const [userPredictions, setUserPredictions] = useState({});
   const [copied, setCopied] = useState(false);
 
@@ -18,11 +17,15 @@ export default function Home() {
   const [inputName, setInputName] = useState('');
   const [inputCode, setInputCode] = useState('');
 
-  // Stato Debug e Log Supabase
-  const [dbStatus, setDbStatus] = useState(null); // { type: 'success'|'error', text: '' }
-  const [savingLega, setSavingLega] = useState(false);
+  // Stato Dettaglio Utente per consultazione schedine nella tab Lega
+  const [selectedMemberDetail, setSelectedMemberDetail] = useState(null);
 
-  // Dati condivisi della Lega da Supabase
+  // Stato Debug e Log Supabase
+  const [dbStatus, setDbStatus] = useState(null);
+  const [savingLega, setSavingLega] = useState(false);
+  const [savingPredictions, setSavingPredictions] = useState(false);
+
+  // Dati condivisi da Supabase
   const [allLeaguePredictions, setAllLeaguePredictions] = useState([]);
 
   // Stato API e Rose
@@ -144,7 +147,7 @@ export default function Home() {
     setTeamsSquads(loadedSquads);
   }, []);
 
-  // Carica i Pronostici della Lega da Supabase
+  // Carica i Pronostici della Lega da Supabase tramite API Route
   const fetchLeagueData = async () => {
     if (!joinedLeagueCode) return;
 
@@ -161,19 +164,17 @@ export default function Home() {
           .forEach((item) => {
             if (item.match_id !== 'JOIN_ENTRY') {
               myPreds[item.match_id] = {
-                homeScore: item.home_score ?? '',
-                awayScore: item.away_score ?? '',
-                outcome: item.outcome ?? '',
-                scorer: item.scorer ?? '',
+                homeScore: item.home_score !== null ? String(item.home_score) : '0',
+                awayScore: item.away_score !== null ? String(item.away_score) : '0',
+                outcome: item.outcome || 'X',
+                scorer: item.scorer || '',
               };
             }
           });
         setUserPredictions(myPreds);
-      } else if (dataPreds.error) {
-        setDbStatus({ type: 'error', text: `Errore Lettura DB: ${dataPreds.error}` });
       }
     } catch (e) {
-      setDbStatus({ type: 'error', text: `Errore Chiamata Lettura: ${e.message}` });
+      console.error('Errore caricamento dati:', e);
     }
   };
 
@@ -183,7 +184,7 @@ export default function Home() {
     }
   }, [userName, joinedLeagueCode, matches]);
 
-  // TEST CREAZIONE E SALVATAGGIO LEGA
+  // Registrazione e Creazione Lega
   const handleSaveAndJoinLeague = async (e) => {
     e.preventDefault();
     if (!inputName.trim()) return;
@@ -212,7 +213,7 @@ export default function Home() {
       const result = await res.json();
 
       if (res.ok && result.success) {
-        setDbStatus({ type: 'success', text: `Lega "${finalCode}" creata/collegata con successo su Supabase!` });
+        setDbStatus({ type: 'success', text: `Lega "${finalCode}" creata/collegata con successo!` });
         
         localStorage.setItem('user_nickname', nick);
         localStorage.setItem('user_league_code', finalCode);
@@ -225,7 +226,7 @@ export default function Home() {
         setDbStatus({ type: 'error', text: `Errore Scrittura Supabase: ${result.error || JSON.stringify(result)}` });
       }
     } catch (err) {
-      setDbStatus({ type: 'error', text: `Errore Rete/Client: ${err.message}` });
+      setDbStatus({ type: 'error', text: `Errore Rete: ${err.message}` });
     } finally {
       setSavingLega(false);
     }
@@ -239,36 +240,71 @@ export default function Home() {
     setDbStatus(null);
   };
 
-  // Salva un pronostico su Supabase
-  const savePredictionToSupabase = async (matchId, predData) => {
+  // INIZIALIZZA PRONOSTICI PER LA GIORNATA ("Pronostica Giornata")
+  const handleStartPredictionsForMatchday = () => {
+    if (!matches || matches.length === 0) return;
+
+    const initialPreds = { ...userPredictions };
+    matches.forEach((m) => {
+      if (!initialPreds[m.id]) {
+        initialPreds[m.id] = {
+          homeScore: '0',
+          awayScore: '0',
+          outcome: 'X',
+          scorer: ''
+        };
+      }
+    });
+
+    setUserPredictions(initialPreds);
+    setDbStatus({ type: 'success', text: 'Modalità scommessa attivata! Risultati predefiniti a 0 - 0 (X). Modifica e clicca "Salva Tutti i Pronostici".' });
+  };
+
+  // INVIA E SALVA TUTTI I PRONOSTICI COMPILATI IN UN'UNICA CHIAMATA
+  const handleSaveAllPredictions = async () => {
     if (!joinedLeagueCode || !userName) return;
 
-    try {
-      const payload = {
+    setSavingPredictions(true);
+    setDbStatus(null);
+
+    const recordsToSave = Object.keys(userPredictions).map((matchId) => {
+      const pred = userPredictions[matchId];
+      return {
         league_code: joinedLeagueCode,
         nickname: userName,
         match_id: String(matchId),
-        home_score: predData.homeScore !== '' ? parseInt(predData.homeScore, 10) : null,
-        away_score: predData.awayScore !== '' ? parseInt(predData.awayScore, 10) : null,
-        outcome: predData.outcome || null,
-        scorer: predData.scorer || null,
+        home_score: pred.homeScore !== '' ? parseInt(pred.homeScore, 10) : 0,
+        away_score: pred.awayScore !== '' ? parseInt(pred.awayScore, 10) : 0,
+        outcome: pred.outcome || calculateOutcome(pred.homeScore, pred.awayScore) || 'X',
+        scorer: pred.scorer || null
       };
+    });
 
+    if (recordsToSave.length === 0) {
+      setDbStatus({ type: 'error', text: 'Nessun pronostico inserito da salvare. Clicca su "Pronostica Giornata".' });
+      setSavingPredictions(false);
+      return;
+    }
+
+    try {
       const res = await fetch('/api/predictions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(recordsToSave),
       });
 
       const resJson = await res.json();
-      if (!res.ok) {
-        setDbStatus({ type: 'error', text: `Errore Salvataggio Pronostico: ${resJson.error}` });
-      } else {
-        setDbStatus({ type: 'success', text: `Pronostico salvato con successo!` });
+
+      if (res.ok && resJson.success) {
+        setDbStatus({ type: 'success', text: `Tutti i tuoi pronostici sono stati salvati su Supabase!` });
         fetchLeagueData();
+      } else {
+        setDbStatus({ type: 'error', text: `Errore Salvataggio: ${resJson.error || JSON.stringify(resJson)}` });
       }
     } catch (e) {
       setDbStatus({ type: 'error', text: `Errore Connessione: ${e.message}` });
+    } finally {
+      setSavingPredictions(false);
     }
   };
 
@@ -387,10 +423,10 @@ export default function Home() {
     fetchMatches(null);
   }, [selectedLeague]);
 
-  // ESTRAGGO PARTECPANTI UNICI
+  // Estraggo Partecipanti Unici
   const leagueMembersList = Array.from(new Set(allLeaguePredictions.map(p => p.nickname)));
 
-  // CALCOLO CLASSIFICA UNIFICATA DI GRUPPO
+  // Calcolo Classifica Unificata di Gruppo
   const calculateGroupLeaderboard = () => {
     const userScores = {};
 
@@ -439,32 +475,30 @@ export default function Home() {
 
   const leaderboard = calculateGroupLeaderboard();
 
-  // Gestione Input Pronostico
+  // Gestione Input Pronostico Locale
   const calculateOutcome = (homeVal, awayVal) => {
-    if (homeVal === '' || awayVal === '') return null;
+    if (homeVal === '' || awayVal === '' || homeVal === null || awayVal === null) return 'X';
     const h = parseInt(homeVal, 10);
     const a = parseInt(awayVal, 10);
-    if (isNaN(h) || isNaN(a)) return null;
+    if (isNaN(h) || isNaN(a)) return 'X';
     if (h > a) return '1';
     if (h < a) return '2';
     return 'X';
   };
 
   const handleScoreChange = (matchId, team, value) => {
-    const currentPred = userPredictions[matchId] || { homeScore: '', awayScore: '', scorer: '' };
+    const currentPred = userPredictions[matchId] || { homeScore: '0', awayScore: '0', scorer: '' };
     const updated = { ...currentPred, [team]: value };
     updated.outcome = calculateOutcome(updated.homeScore, updated.awayScore);
 
     setUserPredictions((prev) => ({ ...prev, [matchId]: updated }));
-    savePredictionToSupabase(matchId, updated);
   };
 
   const handleScorerChange = (matchId, value) => {
-    const currentPred = userPredictions[matchId] || { homeScore: '', awayScore: '', scorer: '' };
+    const currentPred = userPredictions[matchId] || { homeScore: '0', awayScore: '0', scorer: '' };
     const updated = { ...currentPred, scorer: value };
 
     setUserPredictions((prev) => ({ ...prev, [matchId]: updated }));
-    savePredictionToSupabase(matchId, updated);
   };
 
   const handleMatchdayChange = (newMatchday) => {
@@ -494,9 +528,9 @@ export default function Home() {
           </div>
 
           <div>
-            <h1 className="text-xl font-bold text-slate-800">Crea o Entra in Lega</h1>
+            <h1 className="text-xl font-bold text-slate-800">Lega Pronostici</h1>
             <p className="text-xs text-slate-500 mt-1">
-              Inserisci il nome e il codice per scrivere i dati su Supabase
+              Inserisci il tuo soprannome e il codice per giocare con i tuoi amici!
             </p>
           </div>
 
@@ -519,7 +553,7 @@ export default function Home() {
               <input
                 type="text"
                 required
-                placeholder="Es. Nicola"
+                placeholder="Es. Bomber99"
                 value={inputName}
                 onChange={(e) => setInputName(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -527,10 +561,10 @@ export default function Home() {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">Codice Lega da creare o unirti:</label>
+              <label className="text-xs font-bold text-slate-700 block mb-1">Codice Invito Lega:</label>
               <input
                 type="text"
-                placeholder="Es. LEGA-TEST99"
+                placeholder="Es. LEGA-8492"
                 value={inputCode}
                 onChange={(e) => setInputCode(e.target.value.toUpperCase())}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-mono font-bold tracking-wider text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -545,10 +579,10 @@ export default function Home() {
               {savingLega ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Salvataggio su Supabase in corso...</span>
+                  <span>Connessione a Supabase...</span>
                 </>
               ) : (
-                <span>Salva e Crea Lega</span>
+                <span>Entra in Gioco</span>
               )}
             </button>
           </form>
@@ -578,15 +612,16 @@ export default function Home() {
         </button>
       </header>
 
+      {/* FEEDBACK A SCHERMO */}
       {dbStatus && (
         <div className={`m-3 p-3 rounded-xl text-xs font-semibold flex items-center justify-between border ${
           dbStatus.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-700'
         }`}>
           <div className="flex items-center space-x-2">
             {dbStatus.type === 'success' ? <CheckCircle className="w-4 h-4 text-emerald-600" /> : <AlertCircle className="w-4 h-4 text-red-600" />}
-            <span>{dbStatus.text}</span>
+            <span className="break-words">{dbStatus.text}</span>
           </div>
-          <button onClick={() => setDbStatus(null)} className="text-slate-400 hover:text-slate-600">✕</button>
+          <button onClick={() => setDbStatus(null)} className="text-slate-400 hover:text-slate-600 ml-2">✕</button>
         </div>
       )}
 
@@ -613,27 +648,39 @@ export default function Home() {
         {/* TAB 1: PARTITE */}
         {activeTab === 'matches' && (
           <div className="space-y-4">
-            {selectedLeague !== 'UNL' && (
-              <div className="flex justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-slate-200">
-                <span className="text-sm font-bold text-slate-700">
-                  {matchday ? `Giornata ${matchday}` : 'Caricamento...'}
-                </span>
-                <div className="flex space-x-1">
-                  <button
-                    onClick={() => handleMatchdayChange((matchday || 1) - 1)}
-                    className="px-2.5 py-1 bg-slate-100 text-slate-600 text-xs rounded-lg font-semibold hover:bg-slate-200 border border-slate-200"
-                  >
-                    &lt; Pres
-                  </button>
-                  <button
-                    onClick={() => handleMatchdayChange((matchday || 1) + 1)}
-                    className="px-2.5 py-1 bg-slate-100 text-slate-600 text-xs rounded-lg font-semibold hover:bg-slate-200 border border-slate-200"
-                  >
-                    Succ &gt;
-                  </button>
-                </div>
+            <div className="flex justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-slate-200">
+              <span className="text-xs font-bold text-slate-700">
+                {selectedLeague === 'UNL' ? 'Nations League' : matchday ? `Giornata ${matchday}` : 'Caricamento...'}
+              </span>
+
+              <div className="flex space-x-1.5 items-center">
+                {selectedLeague !== 'UNL' && (
+                  <>
+                    <button
+                      onClick={() => handleMatchdayChange((matchday || 1) - 1)}
+                      className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-lg font-semibold hover:bg-slate-200 border border-slate-200"
+                    >
+                      &lt;
+                    </button>
+                    <button
+                      onClick={() => handleMatchdayChange((matchday || 1) + 1)}
+                      className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-lg font-semibold hover:bg-slate-200 border border-slate-200"
+                    >
+                      &gt;
+                    </button>
+                  </>
+                )}
+
+                {/* TASTO "PRONOSTICA GIORNATA" */}
+                <button
+                  onClick={handleStartPredictionsForMatchday}
+                  className="bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1 shadow-sm transition-all"
+                >
+                  <Play className="w-3 h-3 fill-current" />
+                  <span>Pronostica</span>
+                </button>
               </div>
-            )}
+            </div>
 
             {loading && (
               <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-500 space-y-2">
@@ -645,7 +692,7 @@ export default function Home() {
             {!loading &&
               matches.map((match) => {
                 const currentPred = userPredictions[match.id] || {};
-                const currentOutcome = currentPred.outcome;
+                const currentOutcome = currentPred.outcome || 'X';
                 const isFinished = match.status === 'FINISHED';
 
                 const homeName = match.homeTeam?.shortName || match.homeTeam?.name || 'Casa';
@@ -684,7 +731,7 @@ export default function Home() {
                             type="number"
                             min="0"
                             placeholder="0"
-                            value={currentPred.homeScore ?? ''}
+                            value={currentPred.homeScore ?? '0'}
                             onChange={(e) => handleScoreChange(match.id, 'homeScore', e.target.value)}
                             className="w-12 bg-white text-center text-xs py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold shadow-sm"
                           />
@@ -693,7 +740,7 @@ export default function Home() {
                             type="number"
                             min="0"
                             placeholder="0"
-                            value={currentPred.awayScore ?? ''}
+                            value={currentPred.awayScore ?? '0'}
                             onChange={(e) => handleScoreChange(match.id, 'awayScore', e.target.value)}
                             className="w-12 bg-white text-center text-xs py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold shadow-sm"
                           />
@@ -701,7 +748,7 @@ export default function Home() {
                       </div>
 
                       <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
-                        <span className="text-xs text-slate-500 font-medium">Esito:</span>
+                        <span className="text-xs text-slate-500 font-medium">Esito (Calcolato):</span>
                         <div className="grid grid-cols-3 gap-1.5 w-36">
                           {['1', 'X', '2'].map((outcome) => (
                             <div
@@ -743,6 +790,29 @@ export default function Home() {
                   </div>
                 );
               })}
+
+            {/* TASTO PRINCIPALE "SALVA TUTTI I PRONOSTICI" */}
+            {!loading && matches.length > 0 && (
+              <div className="pt-2">
+                <button
+                  onClick={handleSaveAllPredictions}
+                  disabled={savingPredictions}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white font-bold py-3.5 rounded-2xl shadow-lg transition-all text-xs flex items-center justify-center space-x-2"
+                >
+                  {savingPredictions ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Invio a Supabase in corso...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>Salva Tutti i Pronostici</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -787,7 +857,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB 3: LEGA E MEMBRI ISCRITTI */}
+        {/* TAB 3: LEGA E CONSULTAZIONE SCHEDINE DEGLI AMICI */}
         {activeTab === 'league' && (
           <div className="space-y-4">
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
@@ -805,18 +875,72 @@ export default function Home() {
               </button>
             </div>
 
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
-              <h3 className="font-bold text-sm text-slate-800">Partecipanti alla Lega ({leagueMembersList.length})</h3>
-              <div className="divide-y divide-slate-100">
-                {leagueMembersList.map((nick) => (
-                  <div key={nick} className="py-2 flex items-center space-x-2 text-xs">
+            {/* VISTA DETTAGLIO SCHEDINA UTENTE SELEZIONATO */}
+            {selectedMemberDetail ? (
+              <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+                <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                  <div className="flex items-center space-x-2">
                     <User className="w-4 h-4 text-emerald-600" />
-                    <span className="font-semibold text-slate-700">{nick}</span>
-                    {nick === userName && <span className="text-[10px] text-emerald-600 font-bold">(Tu)</span>}
+                    <h3 className="font-bold text-sm text-slate-800">Schedina di {selectedMemberDetail}</h3>
                   </div>
-                ))}
+                  <button
+                    onClick={() => setSelectedMemberDetail(null)}
+                    className="text-xs text-emerald-600 font-bold hover:underline"
+                  >
+                    Torna all'elenco
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {allLeaguePredictions
+                    .filter((p) => p.nickname === selectedMemberDetail && p.match_id !== 'JOIN_ENTRY')
+                    .map((p) => {
+                      const match = matches.find((m) => String(m.id) === String(p.match_id));
+                      return (
+                        <div key={p.match_id} className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs space-y-1">
+                          <div className="flex justify-between font-bold text-slate-700">
+                            <span>Partita: #{p.match_id}</span>
+                            <span className="text-emerald-700">{p.home_score} - {p.away_score} ({p.outcome})</span>
+                          </div>
+                          {p.scorer && (
+                            <p className="text-slate-500 text-[11px]">Marcatore: <span className="font-semibold text-slate-700">{p.scorer}</span></p>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                  {allLeaguePredictions.filter((p) => p.nickname === selectedMemberDetail && p.match_id !== 'JOIN_ENTRY').length === 0 && (
+                    <p className="text-xs text-slate-400 p-2 text-center">Nessun pronostico registrato per questo partecipante.</p>
+                  )}
+                </div>
               </div>
-            </div>
+            ) : (
+              /* ELENCO PARTECPANTI CLICCABILI */
+              <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+                <h3 className="font-bold text-sm text-slate-800">Partecipanti alla Lega ({leagueMembersList.length})</h3>
+                <p className="text-[11px] text-slate-400">Clicca su un utente per vedere i suoi pronostici inviati.</p>
+
+                <div className="divide-y divide-slate-100">
+                  {leagueMembersList.map((nick) => (
+                    <div
+                      key={nick}
+                      onClick={() => setSelectedMemberDetail(nick)}
+                      className="py-2.5 flex items-center justify-between text-xs cursor-pointer hover:bg-slate-50 px-2 rounded-lg transition-all"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <User className="w-4 h-4 text-emerald-600" />
+                        <span className="font-semibold text-slate-700">{nick}</span>
+                        {nick === userName && <span className="text-[10px] text-emerald-600 font-bold">(Tu)</span>}
+                      </div>
+                      <div className="flex items-center space-x-1 text-slate-400">
+                        <Eye className="w-3.5 h-3.5" />
+                        <ChevronRight className="w-4 h-4" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
               <h3 className="font-bold text-sm text-slate-800">Invita Amici via WhatsApp</h3>
