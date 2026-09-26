@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Trophy, Calendar, Users, RefreshCw, Settings, Database, Share2, Copy, Check, UserCheck, LogOut, User, AlertCircle, CheckCircle, Save, Play, ChevronRight, ChevronDown, Eye, PlusCircle, Layers, Lock, History, Target, Edit3, Key, Shield } from 'lucide-react';
+import { Trophy, Calendar, Users, RefreshCw, Settings, Database, Share2, Copy, Check, UserCheck, LogOut, User, AlertCircle, CheckCircle, Save, Play, ChevronRight, ChevronDown, Eye, PlusCircle, Layers, Lock, History, Target, Edit3, Key, Shield, Award, Medal, Zap, Star } from 'lucide-react';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('matches');
@@ -10,6 +10,9 @@ export default function Home() {
   const [matchday, setMatchday] = useState(null);
   const [userPredictions, setUserPredictions] = useState({});
   const [copied, setCopied] = useState(false);
+
+  // Sotto-tab della sezione Classifica ('standard', 'achievements', 'badges')
+  const [standingsSubTab, setStandingsSubTab] = useState('standard');
 
   // Stato Scommessa Attiva
   const [isEditingPredictions, setIsEditingPredictions] = useState(false);
@@ -372,6 +375,7 @@ export default function Home() {
   // SELEZIONA LEGA ATTIVA DALLA LISTA
   const handleSelectActiveLeague = (code) => {
     setActiveLeagueCode(code);
+    setExpandedLeague(code);
     localStorage.setItem('user_active_league_code', code);
     setDbStatus({ type: 'success', text: `Passato alla lega ${code}` });
   };
@@ -693,7 +697,7 @@ export default function Home() {
     }
   };
 
-  // Calcolo Classifica
+  // CALCOLO CLASSIFICA STANDARD SULLE PARTITE CONCLUSE
   const calculateGroupLeaderboard = () => {
     const userScores = {};
 
@@ -720,7 +724,100 @@ export default function Home() {
     return Object.values(userScores).sort((a, b) => b.matchdayPts - a.matchdayPts);
   };
 
+  // CALCOLO OBIETTIVI / ACHIEVEMENTS E CLASSIFICA PARALLELA
+  const calculateAchievementsForUsers = () => {
+    const userAchievements = {};
+
+    leagueMembersList.forEach((nick) => {
+      userAchievements[nick] = {
+        name: nick,
+        totalAchievementPts: 0,
+        totalExacts: 0,
+        totalOutcomes: 0,
+        totalScorers: 0,
+        unlockedBadges: [],
+        dayScorersCounts: {},
+        dayExactsCounts: {},
+        dayOutcomesCounts: {}
+      };
+    });
+
+    allLeaguePredictions.forEach((pred) => {
+      if (pred.match_id === 'JOIN_ENTRY') return;
+
+      if (!userAchievements[pred.nickname]) {
+        userAchievements[pred.nickname] = {
+          name: pred.nickname,
+          totalAchievementPts: 0,
+          totalExacts: 0,
+          totalOutcomes: 0,
+          totalScorers: 0,
+          unlockedBadges: [],
+          dayScorersCounts: {},
+          dayExactsCounts: {},
+          dayOutcomesCounts: {}
+        };
+      }
+
+      const match = findMatchDetailsById(pred.match_id);
+      if (!match || match.status !== 'FINISHED') return;
+
+      const evalResult = evaluateSinglePrediction(pred, match);
+
+      if (evalResult.status === 'EXACT') {
+        userAchievements[pred.nickname].totalExacts += 1;
+      } else if (evalResult.status === 'OUTCOME') {
+        userAchievements[pred.nickname].totalOutcomes += 1;
+      }
+
+      if (pred.scorer && match.goals && Array.isArray(match.goals)) {
+        const predictedScorersList = pred.scorer.split(',').map(s => s.trim().toLowerCase());
+        predictedScorersList.forEach((predictedScorer) => {
+          const hasScored = match.goals.some((g) =>
+            g.scorer?.name?.toLowerCase().includes(predictedScorer)
+          );
+          if (hasScored) {
+            userAchievements[pred.nickname].totalScorers += 1;
+          }
+        });
+      }
+    });
+
+    // Calcolo Punti Achievement e Assegnazione Badge
+    Object.values(userAchievements).forEach((u) => {
+      let pts = 0;
+      const badges = [];
+
+      // 1. Ogni 10 Marcatori Totali (+100 pt per blocco di 10)
+      const scorerBlocks = Math.floor(u.totalScorers / 10);
+      if (scorerBlocks > 0) {
+        pts += scorerBlocks * 100;
+        badges.push(`⚽ Cecchino (${u.totalScorers} Marcatori) [+${scorerBlocks * 100}pt]`);
+      }
+
+      // 2. Ogni 10 Risultati Esatti Totali (+150 pt per blocco di 10)
+      const exactBlocks = Math.floor(u.totalExacts / 10);
+      if (exactBlocks > 0) {
+        pts += exactBlocks * 150;
+        badges.push(`🎯 Mago Esatti (${u.totalExacts} Esatti) [+${exactBlocks * 150}pt]`);
+      }
+
+      // 3. Ogni 10 Esiti Totali (+30 pt per blocco di 10)
+      const outcomeBlocks = Math.floor(u.totalOutcomes / 10);
+      if (outcomeBlocks > 0) {
+        pts += outcomeBlocks * 30;
+        badges.push(`👑 Pronosticatore (${u.totalOutcomes} Esiti) [+${outcomeBlocks * 30}pt]`);
+      }
+
+      u.totalAchievementPts = pts;
+      u.unlockedBadges = badges;
+    });
+
+    return Object.values(userAchievements).sort((a, b) => b.totalAchievementPts - a.totalAchievementPts);
+  };
+
   const leaderboard = calculateGroupLeaderboard();
+  const achievementsLeaderboard = calculateAchievementsForUsers();
 
   const calculateOutcome = (homeVal, awayVal) => {
     if (homeVal === '' || awayVal === '' || homeVal === null || awayVal === null) return 'X';
@@ -1197,44 +1294,213 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB 2: CLASSIFICA CONDIVISA DI GRUPPO */}
+        {/* TAB 2: CLASSIFICA E OBIETTIVI SBLOCCATI */}
         {activeTab === 'standings' && (
           <div className="space-y-4">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="bg-slate-50 p-3 border-b border-slate-200 font-bold text-xs text-slate-700 flex justify-between items-center">
-                <span>Classifica Gruppo ({activeLeagueCode})</span>
-                <span className="text-xs text-slate-400">{leaderboard.length} Partecipanti</span>
-              </div>
-              {leaderboard.length === 0 ? (
-                <div className="p-6 text-center text-xs text-slate-400">
-                  Nessun iscritto ha ancora inviato pronostici per questa lega.
-                </div>
-              ) : (
-                leaderboard.map((user, idx) => (
-                  <div
-                    key={user.name}
-                    className={`flex items-center justify-between p-3.5 border-b border-slate-100 ${
-                      user.name === userName ? 'bg-amber-50/80 font-bold' : ''
+            {/* SELETTORE LEGA PER CLASSIFICA */}
+            <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-200 space-y-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Seleziona Lega per Classifica:</span>
+              <div className="flex space-x-2 overflow-x-auto">
+                {userLeagues.map((code) => (
+                  <button
+                    key={code}
+                    onClick={() => handleSelectActiveLeague(code)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold tracking-wider transition-all whitespace-nowrap ${
+                      code === activeLeagueCode
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                   >
-                    <div className="flex items-center space-x-3">
-                      <span className={`w-6 text-center font-extrabold text-xs rounded-full py-1 ${idx === 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
-                        {idx + 1}
-                      </span>
-                      <span className="font-semibold text-sm text-slate-800">
-                        {user.name} {user.name === userName ? '(Tu)' : ''}
+                    {code}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* SOTTO-TAB CLASSIFICA STANDARD / OBIETTIVI / BADGE */}
+            <div className="bg-slate-200/80 p-1 rounded-xl grid grid-cols-3 gap-1 text-center">
+              <button
+                onClick={() => setStandingsSubTab('standard')}
+                className={`py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  standingsSubTab === 'standard' ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-600'
+                }`}
+              >
+                Classifica
+              </button>
+              <button
+                onClick={() => setStandingsSubTab('achievements')}
+                className={`py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  standingsSubTab === 'achievements' ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-600'
+                }`}
+              >
+                Obiettivi
+              </button>
+              <button
+                onClick={() => setStandingsSubTab('badges')}
+                className={`py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  standingsSubTab === 'badges' ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-600'
+                }`}
+              >
+                Sbloccati
+              </button>
+            </div>
+
+            {/* 1. CLASSIFICA STANDARD */}
+            {standingsSubTab === 'standard' && (
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-slate-50 p-3 border-b border-slate-200 font-bold text-xs text-slate-700 flex justify-between items-center">
+                  <span>Classifica Ufficiale ({activeLeagueCode})</span>
+                  <span className="text-xs text-slate-400">{leaderboard.length} Partecipanti</span>
+                </div>
+                {leaderboard.length === 0 ? (
+                  <div className="p-6 text-center text-xs text-slate-400">
+                    Nessun iscritto ha ancora inviato pronostici per questa lega.
+                  </div>
+                ) : (
+                  leaderboard.map((user, idx) => (
+                    <div
+                      key={user.name}
+                      className={`flex items-center justify-between p-3.5 border-b border-slate-100 ${
+                        user.name === userName ? 'bg-amber-50/80 font-bold' : ''
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <span className={`w-6 text-center font-extrabold text-xs rounded-full py-1 ${idx === 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
+                          {idx + 1}
+                        </span>
+                        <span className="font-semibold text-sm text-slate-800">
+                          {user.name} {user.name === userName ? '(Tu)' : ''}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <span className="text-xs text-slate-400">{user.exactScores} esatti</span>
+                        <span className="font-extrabold text-emerald-700 text-base font-mono">
+                          {user.matchdayPts} pt
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {/* 2. CLASSIFICA OBIETTIVI PARALLELA */}
+            {standingsSubTab === 'achievements' && (
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden space-y-1">
+                <div className="bg-amber-50 p-3 border-b border-amber-200 font-bold text-xs text-amber-900 flex justify-between items-center">
+                  <span className="flex items-center space-x-1.5">
+                    <Award className="w-4 h-4 text-amber-600" />
+                    <span>Classifica Obiettivi ({activeLeagueCode})</span>
+                  </span>
+                  <span className="text-xs text-amber-700">Punti Achievement</span>
+                </div>
+
+                {achievementsLeaderboard.map((user, idx) => (
+                  <div
+                    key={user.name}
+                    className={`p-3.5 border-b border-slate-100 space-y-2 ${
+                      user.name === userName ? 'bg-amber-50/40' : ''
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <span className={`w-6 text-center font-extrabold text-xs rounded-full py-1 ${idx === 0 ? 'bg-amber-400 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                          {idx + 1}
+                        </span>
+                        <span className="font-bold text-sm text-slate-800">
+                          {user.name} {user.name === userName ? '(Tu)' : ''}
+                        </span>
+                      </div>
+                      <span className="font-extrabold text-amber-600 text-base font-mono">
+                        +{user.totalAchievementPts} PT
                       </span>
                     </div>
-                    <div className="flex items-center space-x-4">
-                      <span className="text-xs text-slate-400">{user.exactScores} esatti</span>
-                      <span className="font-extrabold text-emerald-700 text-base font-mono">
-                        {user.matchdayPts} pt
-                      </span>
+
+                    {user.unlockedBadges.length > 0 ? (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {user.unlockedBadges.map((badge, bIdx) => (
+                          <span key={bIdx} className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md text-[10px] font-semibold border border-slate-200">
+                            {badge}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-slate-400 italic">Nessun obiettivo ancora sbloccato.</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 3. LISTA BADGE E PROGRESSO OBIETTIVI */}
+            {standingsSubTab === 'badges' && (
+              <div className="space-y-3">
+                <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-2">
+                  <h3 className="font-bold text-xs text-slate-800 flex items-center space-x-1.5">
+                    <Star className="w-4 h-4 text-amber-500" />
+                    <span>Progresso Tuoi Obiettivi ({userName})</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Ogni soglia raggiunta aggiunge punti alla tua classifica parallela!
+                  </p>
+                </div>
+
+                {achievementsLeaderboard.filter(u => u.name === userName).map((u) => (
+                  <div key={u.name} className="space-y-2">
+                    {/* SOGLIA MARCATORI */}
+                    <div className="bg-white p-3.5 rounded-2xl border border-slate-200 space-y-2">
+                      <div className="flex justify-between items-center text-xs font-bold">
+                        <span className="flex items-center space-x-1.5 text-sky-900">
+                          <span>⚽ Cecchino dei Marcatori</span>
+                        </span>
+                        <span className="text-emerald-700 font-mono">{u.totalScorers} / {Math.ceil((u.totalScorers + 1) / 10) * 10}</span>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div
+                          className="bg-sky-500 h-full transition-all"
+                          style={{ width: `${Math.min(100, (u.totalScorers % 10) * 10)}%` }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-slate-400">+100 PT per ogni 10 marcatori totali indovinati.</p>
+                    </div>
+
+                    {/* SOGLIA ESATTI */}
+                    <div className="bg-white p-3.5 rounded-2xl border border-slate-200 space-y-2">
+                      <div className="flex justify-between items-center text-xs font-bold">
+                        <span className="flex items-center space-x-1.5 text-emerald-900">
+                          <span>🎯 Mago dei Risultati Esatti</span>
+                        </span>
+                        <span className="text-emerald-700 font-mono">{u.totalExacts} / {Math.ceil((u.totalExacts + 1) / 10) * 10}</span>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div
+                          className="bg-emerald-500 h-full transition-all"
+                          style={{ width: `${Math.min(100, (u.totalExacts % 10) * 10)}%` }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-slate-400">+150 PT per ogni 10 risultati esatti totali indovinati.</p>
+                    </div>
+
+                    {/* SOGLIA ESITI */}
+                    <div className="bg-white p-3.5 rounded-2xl border border-slate-200 space-y-2">
+                      <div className="flex justify-between items-center text-xs font-bold">
+                        <span className="flex items-center space-x-1.5 text-amber-900">
+                          <span>👑 Collezionista di Esiti (1X2)</span>
+                        </span>
+                        <span className="text-amber-700 font-mono">{u.totalOutcomes} / {Math.ceil((u.totalOutcomes + 1) / 10) * 10}</span>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div
+                          className="bg-amber-500 h-full transition-all"
+                          style={{ width: `${Math.min(100, (u.totalOutcomes % 10) * 10)}%` }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-slate-400">+30 PT per ogni 10 esiti totali indovinati.</p>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
