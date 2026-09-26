@@ -17,7 +17,7 @@ export default function Home() {
   const [inputName, setInputName] = useState('');
   const [inputCode, setInputCode] = useState('');
 
-  // Dati condivisi della Lega da Supabase
+  // Dati condivisi da Supabase
   const [allLeaguePredictions, setAllLeaguePredictions] = useState([]);
 
   // Stato API e Rose
@@ -28,10 +28,9 @@ export default function Home() {
   const [syncMessage, setSyncMessage] = useState('');
   const [error, setError] = useState(null);
 
-  // Configurazione Supabase
-  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || 'https://ciklkrqvzaputhoilstl.supabase.co';
-  const baseUrl = rawUrl.replace(/\/rest\/v1\/?$/, '');
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.ANON_KEY;
+  // Configurazione Diretta Supabase
+  const baseUrl = 'https://ciklkrqvzaputhoilstl.supabase.co';
+  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpa2xrcXZ6YXB1dGhvaWxzdGwiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc0MTE5ODE3NCwiZXhwIjoyMDU2Nzc0MTc0fQ.EY-5Tq6dJ1V82EaK-b-m0gYqQJdIn3T2bY6P5W5K7XQ';
 
   const leagues = [
     { id: 'SA', name: 'Serie A', country: '🇮🇹' },
@@ -145,7 +144,7 @@ export default function Home() {
 
   // Carica i Pronostici della Lega da Supabase
   const fetchLeagueData = async () => {
-    if (!joinedLeagueCode || !supabaseKey) return;
+    if (!joinedLeagueCode) return;
 
     try {
       const resPreds = await fetch(
@@ -189,7 +188,7 @@ export default function Home() {
 
   // Salva un pronostico su Supabase
   const savePredictionToSupabase = async (matchId, predData) => {
-    if (!joinedLeagueCode || !userName || !supabaseKey) return;
+    if (!joinedLeagueCode || !userName) return;
 
     try {
       const payload = {
@@ -281,25 +280,23 @@ export default function Home() {
     setUserName(nick);
     setJoinedLeagueCode(finalCode);
 
-    // Salva record di registrazione
-    if (supabaseKey) {
-      try {
-        await fetch(`${baseUrl}/rest/v1/predictions`, {
-          method: 'POST',
-          headers: {
-            apikey: supabaseKey,
-            Authorization: `Bearer ${supabaseKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            league_code: finalCode,
-            nickname: nick,
-            match_id: 'JOIN_ENTRY'
-          }),
-        });
-      } catch (e) {
-        console.error(e);
-      }
+    // Salva record di registrazione su Supabase
+    try {
+      await fetch(`${baseUrl}/rest/v1/predictions`, {
+        method: 'POST',
+        headers: {
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          league_code: finalCode,
+          nickname: nick,
+          match_id: 'JOIN_ENTRY'
+        }),
+      });
+    } catch (e) {
+      console.error(e);
     }
 
     fetchLeagueData();
