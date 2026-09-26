@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Trophy, Calendar, Users, RefreshCw, Settings, Database, Share2, Copy, Check, UserCheck, LogOut, User, AlertCircle, CheckCircle, Save, Play, ChevronRight, Eye, PlusCircle, Layers, Lock } from 'lucide-react';
+import { Trophy, Calendar, Users, RefreshCw, Settings, Database, Share2, Copy, Check, UserCheck, LogOut, User, AlertCircle, CheckCircle, Save, Play, ChevronRight, Eye, PlusCircle, Layers, Lock, Award, History } from 'lucide-react';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('matches');
@@ -598,13 +598,11 @@ export default function Home() {
     fetchMatches(null);
   }, [selectedLeague]);
 
-  // FUNZIONE UTILS: Trova la partita per un dato ID per recuperare i nomi reali delle squadre
+  // FUNZIONE UTILS: Trova la partita per un dato ID
   const findMatchDetailsById = (matchId) => {
-    // 1. Cerca nelle partite attualmente caricate a schermo
     const foundInCurrent = matches.find((m) => String(m.id) === String(matchId));
     if (foundInCurrent) return foundInCurrent;
 
-    // 2. Cerca nelle partite fisse di Nations League
     const foundInNL = nationsLeagueMatches.find((m) => String(m.id) === String(matchId));
     if (foundInNL) return foundInNL;
 
@@ -613,6 +611,55 @@ export default function Home() {
 
   // Partecipanti Unici della Lega Attiva
   const leagueMembersList = Array.from(new Set(allLeaguePredictions.map(p => p.nickname)));
+
+  // CALCOLO PUNTI E RISULTATO DI UN SINGOLO PRONOSTICO
+  const evaluateSinglePrediction = (pred, match) => {
+    if (!match || match.status !== 'FINISHED') {
+      return { status: 'PENDING', pts: 0, text: 'In Corso / In Programma', colorBg: 'bg-slate-100', colorText: 'text-slate-600' };
+    }
+
+    const realHome = match.score?.fullTime?.home;
+    const realAway = match.score?.fullTime?.away;
+
+    if (realHome === null || realHome === undefined || realAway === null || realAway === undefined) {
+      return { status: 'PENDING', pts: 0, text: 'In Corso', colorBg: 'bg-slate-100', colorText: 'text-slate-600' };
+    }
+
+    let realOutcome = 'X';
+    if (realHome > realAway) realOutcome = '1';
+    if (realHome < realAway) realOutcome = '2';
+
+    let pts = 0;
+    const isExact = pred.home_score === realHome && pred.away_score === realAway;
+    const isOutcomeCorrect = pred.outcome === realOutcome;
+
+    if (isExact) {
+      pts += 3;
+    } else if (isOutcomeCorrect) {
+      pts += 1;
+    }
+
+    let scorerPts = 0;
+    if (pred.scorer && match.goals && Array.isArray(match.goals)) {
+      const hasScored = match.goals.some((g) =>
+        g.scorer?.name?.toLowerCase().includes(pred.scorer.toLowerCase())
+      );
+      if (hasScored) {
+        scorerPts = 2;
+        pts += 2;
+      }
+    }
+
+    if (isExact) {
+      return { status: 'EXACT', pts, text: `Risultato Esatto! (+${pts} pt)`, colorBg: 'bg-emerald-50 border-emerald-300', colorText: 'text-emerald-800' };
+    } else if (isOutcomeCorrect) {
+      return { status: 'OUTCOME', pts, text: `Esito Indovinato (+${pts} pt)`, colorBg: 'bg-amber-50 border-amber-300', colorText: 'text-amber-800' };
+    } else if (scorerPts > 0) {
+      return { status: 'SCORER_ONLY', pts, text: `Marcatore Indovinato (+${pts} pt)`, colorBg: 'bg-blue-50 border-blue-300', colorText: 'text-blue-800' };
+    } else {
+      return { status: 'WRONG', pts: 0, text: 'Sbagliato (0 pt)', colorBg: 'bg-slate-50 border-slate-200', colorText: 'text-slate-500' };
+    }
+  };
 
   // Calcolo Classifica
   const calculateGroupLeaderboard = () => {
@@ -630,31 +677,11 @@ export default function Home() {
       }
 
       const match = findMatchDetailsById(pred.match_id);
-      if (!match || match.status !== 'FINISHED') return;
+      const evalResult = evaluateSinglePrediction(pred, match);
 
-      const realHome = match.score.fullTime.home;
-      const realAway = match.score.fullTime.away;
-
-      let realOutcome = 'X';
-      if (realHome > realAway) realOutcome = '1';
-      if (realHome < realAway) realOutcome = '2';
-
-      const isExactScore = pred.home_score === realHome && pred.away_score === realAway;
-
-      if (isExactScore) {
-        userScores[pred.nickname].matchdayPts += 3;
+      userScores[pred.nickname].matchdayPts += evalResult.pts;
+      if (evalResult.status === 'EXACT') {
         userScores[pred.nickname].exactScores += 1;
-      } else if (pred.outcome === realOutcome) {
-        userScores[pred.nickname].matchdayPts += 1;
-      }
-
-      if (pred.scorer && match.goals && Array.isArray(match.goals)) {
-        const hasScored = match.goals.some((g) =>
-          g.scorer?.name?.toLowerCase().includes(pred.scorer.toLowerCase())
-        );
-        if (hasScored) {
-          userScores[pred.nickname].matchdayPts += 2;
-        }
       }
     });
 
@@ -1064,7 +1091,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB 3: LEGA E MULTI-LEGA */}
+        {/* TAB 3: LEGA E STORICO DETTAGLIATO SCHEDINE */}
         {activeTab === 'league' && (
           <div className="space-y-4">
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
@@ -1144,13 +1171,13 @@ export default function Home() {
               </div>
             )}
 
-            {/* VISTA DETTAGLIO SCHEDINA CON NOMI DI SQUADRA REALI */}
+            {/* VISTA DETTAGLIO STORICO PRONOSTICI UTENTE SELEZIONATO */}
             {selectedMemberDetail ? (
-              <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+              <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-4">
                 <div className="flex justify-between items-center border-b border-slate-100 pb-2">
                   <div className="flex items-center space-x-2">
-                    <User className="w-4 h-4 text-emerald-600" />
-                    <h3 className="font-bold text-sm text-slate-800">Schedina di {selectedMemberDetail}</h3>
+                    <History className="w-4 h-4 text-emerald-600" />
+                    <h3 className="font-bold text-sm text-slate-800">Storico Schedine: {selectedMemberDetail}</h3>
                   </div>
                   <button
                     onClick={() => setSelectedMemberDetail(null)}
@@ -1160,40 +1187,67 @@ export default function Home() {
                   </button>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {allLeaguePredictions
                     .filter((p) => p.nickname === selectedMemberDetail && p.match_id !== 'JOIN_ENTRY')
                     .map((p) => {
                       const matchInfo = findMatchDetailsById(p.match_id);
-                      const homeName = matchInfo?.homeTeam?.shortName || matchInfo?.homeTeam?.name || `Partita ${p.match_id}`;
+                      const homeName = matchInfo?.homeTeam?.shortName || matchInfo?.homeTeam?.name || `Partita #${p.match_id}`;
                       const awayName = matchInfo?.awayTeam?.shortName || matchInfo?.awayTeam?.name || '';
+                      
+                      const isFinished = matchInfo?.status === 'FINISHED';
+                      const realHome = matchInfo?.score?.fullTime?.home;
+                      const realAway = matchInfo?.score?.fullTime?.away;
+
+                      const evalResult = evaluateSinglePrediction(p, matchInfo);
 
                       return (
-                        <div key={p.match_id} className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs space-y-1.5">
-                          <div className="flex justify-between items-center font-bold text-slate-800">
-                            <span>{awayName ? `${homeName} vs ${awayName}` : homeName}</span>
-                            <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md font-mono text-[11px]">
-                              {p.home_score} - {p.away_score} ({p.outcome})
+                        <div key={p.match_id} className={`p-3.5 rounded-2xl border text-xs space-y-2 ${evalResult.colorBg}`}>
+                          <div className="flex justify-between items-start font-bold text-slate-800">
+                            <div>
+                              <p className="text-sm font-bold">{awayName ? `${homeName} vs ${awayName}` : homeName}</p>
+                              {matchInfo?.utcDate && (
+                                <span className="text-[10px] text-slate-400 font-normal">{formatDate(matchInfo.utcDate)}</span>
+                              )}
+                            </div>
+
+                            <span className={`px-2 py-1 rounded-lg text-[10px] font-extrabold ${evalResult.colorText}`}>
+                              {evalResult.text}
                             </span>
                           </div>
+
+                          <div className="grid grid-cols-2 gap-2 bg-white/70 p-2 rounded-xl border border-slate-200/60 text-[11px]">
+                            <div>
+                              <span className="text-slate-400 block text-[10px]">Pronostico Utente:</span>
+                              <span className="font-bold text-emerald-800">{p.home_score} - {p.away_score} ({p.outcome})</span>
+                            </div>
+
+                            <div>
+                              <span className="text-slate-400 block text-[10px]">Risultato Reale:</span>
+                              <span className="font-mono font-bold text-slate-700">
+                                {isFinished ? `${realHome} - ${realAway}` : 'In Programma'}
+                              </span>
+                            </div>
+                          </div>
+
                           {p.scorer && (
-                            <p className="text-slate-500 text-[11px]">
-                              Marcatore: <span className="font-semibold text-slate-700">{p.scorer}</span>
-                            </p>
+                            <div className="text-[11px] text-slate-600 border-t border-slate-200/40 pt-1 flex justify-between">
+                              <span>Marcatore scelto: <strong className="text-slate-800">{p.scorer}</strong></span>
+                            </div>
                           )}
                         </div>
                       );
                     })}
 
                   {allLeaguePredictions.filter((p) => p.nickname === selectedMemberDetail && p.match_id !== 'JOIN_ENTRY').length === 0 && (
-                    <p className="text-xs text-slate-400 p-2 text-center">Nessun pronostico inviato per questa lega.</p>
+                    <p className="text-xs text-slate-400 p-4 text-center">Nessun pronostico inviato per questa lega.</p>
                   )}
                 </div>
               </div>
             ) : (
               <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
                 <h3 className="font-bold text-sm text-slate-800">Membri in {activeLeagueCode} ({leagueMembersList.length})</h3>
-                <p className="text-[11px] text-slate-400">Clicca su un partecipante per consultare i suoi pronostici.</p>
+                <p className="text-[11px] text-slate-400">Clicca su un partecipante per consultare lo storico dei suoi pronostici.</p>
 
                 <div className="divide-y divide-slate-100">
                   {leagueMembersList.map((nick) => (
